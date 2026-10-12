@@ -4,53 +4,57 @@ import org.junit.Before;
 
 public abstract class TesteBase {
 	protected static final int DEFAULT_TIMEOUT = 2000;
-	protected static final String KARAKORUM = Mapa.KARAKORUM;
 
 	protected Jogo jogo;
 	protected Mapa mapa;
 
 	@Before
 	public void prepararPartidaDeDoisJogadores() throws JogadaInvalidaException {
-		jogo = criarJogo(new Cor[] { Cor.vermelho, Cor.azul }, new Herdeiro[] { Herdeiro.altani, Herdeiro.chagatai });
+		mapa = criarMapaDeTeste();
+		jogo = new Jogo(mapa, new Cor[] { Cor.vermelho, Cor.azul });
 	}
 
-	protected Jogo criarJogo(Cor[] cores, Herdeiro[] herdeiros) throws JogadaInvalidaException {
-		mapa = MapaDeTeste.criar();
-		Jogo novo = new Jogo(mapa, cores, herdeiros, new SorteadorFixo());
-		for (Cor cor : cores) {
-			novo.escolherCartaSecreta(cor, 0);
-		}
-		return novo;
-	}
-
-	protected Jogador jogador(Cor cor) {
-		return jogo.getJogador(cor);
+	static Mapa criarMapaDeTeste() {
+		Mapa mapa = new Mapa();
+		mapa.adicionarKarakorum();
+		mapa.adicionarParada("A", Regiao.russia, false);
+		mapa.adicionarParada("B", Regiao.russia, false);
+		mapa.adicionarParada("D", Regiao.china, true);
+		mapa.adicionarParada("E", Regiao.china, false);
+		mapa.adicionarParada("F", Regiao.persia, false);
+		mapa.ligar(Mapa.KARAKORUM, "A");
+		mapa.ligar("A", "B");
+		mapa.ligar("B", "D");
+		mapa.ligar("D", "E");
+		mapa.ligar("E", "F");
+		mapa.ligar("F", Mapa.KARAKORUM);
+		mapa.adicionarProvincia("pa", TipoTributo.espada, new String[] { Mapa.KARAKORUM, "A" });
+		mapa.adicionarProvincia("pb", TipoTributo.yurt, new String[] { "A" });
+		mapa.adicionarProvincia("pd", TipoTributo.espada, new String[] { "B", "D" });
+		mapa.adicionarProvincia("pf", TipoTributo.moeda, new String[] { "F", Mapa.KARAKORUM });
+		mapa.adicionarCidade("c1", Regiao.russia, new String[] { "A" });
+		mapa.adicionarCidade("c2", Regiao.china, new String[] { "D" });
+		mapa.adicionarCidade("c3", Regiao.china, new String[] { "E" });
+		mapa.adicionarCidade("c4", Regiao.persia, new String[] { "F" });
+		mapa.definirDemanda("D", new DemandaDoisIguais(TipoTesouro.pele));
+		mapa.definirDemanda(Mapa.KARAKORUM, new DemandaTresEspecificos(TipoTesouro.pele, TipoTesouro.ferro, TipoTesouro.boi));
+		return mapa;
 	}
 
 	protected void posicionar(Cor cor, String parada) {
-		jogador(cor).setPosicao(mapa.getParada(parada));
+		jogo.getJogador(cor).setPosicao(mapa.getParada(parada));
 	}
 
 	protected void darTributos(Cor cor, TipoTributo tipo, int quantidade) {
-		jogo.receberDoEstoque(jogador(cor), tipo, quantidade);
+		jogo.getJogador(cor).adicionarTributos(tipo, quantidade);
 	}
 
 	protected void darTesouros(Cor cor, TipoTesouro tipo, int quantidade) {
-		jogador(cor).adicionarTesouros(tipo, quantidade);
+		jogo.getJogador(cor).adicionarTesouros(tipo, quantidade);
 	}
 
 	protected void colocarYurt(Cor cor, String parada) {
-		mapa.getParada(parada).colocarYurt(jogador(cor));
-	}
-
-	protected void conquistarCidade(Cor cor, String cidade) {
-		mapa.getCidade(cidade).conquistar(jogador(cor), true);
-	}
-
-	protected void colocarMelhorias(Cor cor, Coluna coluna, TipoMelhoria tipo, int quantidade) throws JogadaInvalidaException {
-		for (int i = 0; i < quantidade; i++) {
-			jogador(cor).getTabuleiro().colocarMelhoria(new Melhoria(tipo, coluna));
-		}
+		mapa.getParada(parada).colocarYurt(jogo.getJogador(cor));
 	}
 
 	protected void jogarTurnoSemAcoes(Coluna coluna) throws JogadaInvalidaException {

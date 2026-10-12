@@ -7,11 +7,10 @@ import java.util.Set;
 class Cidade {
 	private final String nome;
 	private final Regiao regiao;
+	private final List<Parada> paradas = new ArrayList<Parada>();
+	private final List<TipoTesouro> tesouros = new ArrayList<TipoTesouro>();
 	private boolean revelada;
 	private Jogador conquistador;
-	private boolean yurtColocado;
-	private final List<TipoTesouro> tesouros = new ArrayList<TipoTesouro>();
-	private final List<Parada> paradas = new ArrayList<Parada>();
 
 	Cidade(String nome, Regiao regiao) {
 		this.nome = nome;
@@ -39,34 +38,21 @@ class Cidade {
 		return tesouros;
 	}
 
-	boolean retirarTesouro(TipoTesouro tipo) {
-		return tesouros.remove(tipo);
-	}
-
 	Jogador getConquistador() {
 		return conquistador;
 	}
 
-	boolean isYurtColocado() {
-		return yurtColocado;
-	}
-
-	void conquistar(Jogador jogador, boolean comYurt) {
+	void conquistar(Jogador jogador) {
 		conquistador = jogador;
-		yurtColocado = comYurt;
-	}
-
-	List<Parada> getParadas() {
-		return paradas;
 	}
 
 	void adicionarParada(Parada parada) {
 		paradas.add(parada);
 	}
 
-	boolean adjacenteA(Set<Parada> conjunto) {
+	boolean adjacenteA(Set<Parada> visitadas) {
 		for (Parada parada : paradas) {
-			if (conjunto.contains(parada)) {
+			if (visitadas.contains(parada)) {
 				return true;
 			}
 		}

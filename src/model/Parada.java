@@ -9,10 +9,8 @@ class Parada {
 	private final boolean dupla;
 	private final boolean karakorum;
 	private final List<Parada> vizinhas = new ArrayList<Parada>();
-	private final List<Provincia> provincias = new ArrayList<Provincia>();
-	private final List<Cidade> cidades = new ArrayList<Cidade>();
 	private final List<Jogador> yurts = new ArrayList<Jogador>();
-	private Conselheiro conselheiro;
+	private Demanda demanda;
 
 	Parada(String id, Regiao regiao, boolean dupla, boolean karakorum) {
 		this.id = id;
@@ -29,10 +27,6 @@ class Parada {
 		return regiao;
 	}
 
-	boolean isDupla() {
-		return dupla;
-	}
-
 	boolean isKarakorum() {
 		return karakorum;
 	}
@@ -47,41 +41,17 @@ class Parada {
 		}
 	}
 
-	boolean ehVizinha(Parada parada) {
-		return vizinhas.contains(parada);
+	Demanda getDemanda() {
+		return demanda;
 	}
 
-	List<Provincia> getProvincias() {
-		return provincias;
+	void setDemanda(Demanda demanda) {
+		this.demanda = demanda;
 	}
 
-	void adicionarProvincia(Provincia provincia) {
-		provincias.add(provincia);
-	}
-
-	List<Cidade> getCidades() {
-		return cidades;
-	}
-
-	void adicionarCidade(Cidade cidade) {
-		cidades.add(cidade);
-	}
-
-	Conselheiro getConselheiro() {
-		return conselheiro;
-	}
-
-	void setConselheiro(Conselheiro conselheiro) {
-		this.conselheiro = conselheiro;
-	}
-
-	List<Jogador> getYurts() {
-		return yurts;
-	}
-
-	int capacidadeDeYurts() {
+	int capacidadeDePeoes() {
 		if (karakorum) {
-			return 0;
+			return Jogo.MAX_JOGADORES;
 		}
 		if (dupla) {
 			return 2;
@@ -89,9 +59,9 @@ class Parada {
 		return 1;
 	}
 
-	int capacidadeDePeoes() {
+	int capacidadeDeYurts() {
 		if (karakorum) {
-			return Regras.MAX_JOGADORES;
+			return 0;
 		}
 		if (dupla) {
 			return 2;
@@ -111,13 +81,7 @@ class Parada {
 		return yurts.contains(jogador);
 	}
 
-	int yurtsDe(Jogador jogador) {
-		int total = 0;
-		for (Jogador dono : yurts) {
-			if (dono == jogador) {
-				total++;
-			}
-		}
-		return total;
+	int quantidadeDeYurts() {
+		return yurts.size();
 	}
 }
