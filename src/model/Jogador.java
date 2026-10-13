@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Estado do jogador mantido oculto dos componentes externos ao pacote. */
 class Jogador {
     private final String cor;
     private Parada paradaAtual;
