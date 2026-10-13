@@ -1,87 +1,52 @@
 package model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 class Parada {
-	private final String id;
-	private final Regiao regiao;
-	private final boolean dupla;
-	private final boolean karakorum;
-	private final List<Parada> vizinhas = new ArrayList<Parada>();
-	private final List<Jogador> yurts = new ArrayList<Jogador>();
-	private Demanda demanda;
+    static final int CAPACIDADE_ILIMITADA = Integer.MAX_VALUE;
 
-	Parada(String id, Regiao regiao, boolean dupla, boolean karakorum) {
-		this.id = id;
-		this.regiao = regiao;
-		this.dupla = dupla;
-		this.karakorum = karakorum;
-	}
+    private final String id;
+    private final int capacidade;
+    private final Map<String, Parada> vizinhas = new HashMap<>();
+    private final Map<String, Provincia> provinciasAdjacentes = new HashMap<>();
+    private final Map<String, Jogador> ocupantes = new HashMap<>();
 
-	String getId() {
-		return id;
-	}
+    Parada(String id, int capacidade) {
+        this.id = id;
+        this.capacidade = capacidade;
+    }
 
-	Regiao getRegiao() {
-		return regiao;
-	}
+    String getId() {
+        return id;
+    }
 
-	boolean isKarakorum() {
-		return karakorum;
-	}
+    void ligarA(Parada outra) {
+        vizinhas.put(outra.id, outra);
+        outra.vizinhas.put(id, this);
+    }
 
-	List<Parada> getVizinhas() {
-		return vizinhas;
-	}
+    void adicionarProvinciaAdjacente(Provincia provincia) {
+        provinciasAdjacentes.put(provincia.getId(), provincia);
+    }
 
-	void adicionarVizinha(Parada parada) {
-		if (!vizinhas.contains(parada)) {
-			vizinhas.add(parada);
-		}
-	}
+    boolean eVizinha(Parada outra) {
+        return outra != null && vizinhas.containsKey(outra.id);
+    }
 
-	Demanda getDemanda() {
-		return demanda;
-	}
+    boolean temProvinciaAdjacente(String provinciaId) {
+        return provinciasAdjacentes.containsKey(provinciaId);
+    }
 
-	void setDemanda(Demanda demanda) {
-		this.demanda = demanda;
-	}
+    boolean temEspacoPara(Jogador jogador) {
+        return ocupantes.containsKey(jogador.getCor()) || ocupantes.size() < capacidade;
+    }
 
-	int capacidadeDePeoes() {
-		if (karakorum) {
-			return Jogo.MAX_JOGADORES;
-		}
-		if (dupla) {
-			return 2;
-		}
-		return 1;
-	}
+    void entrar(Jogador jogador) {
+        ocupantes.put(jogador.getCor(), jogador);
+    }
 
-	int capacidadeDeYurts() {
-		if (karakorum) {
-			return 0;
-		}
-		if (dupla) {
-			return 2;
-		}
-		return 1;
-	}
-
-	boolean cabeYurt() {
-		return yurts.size() < capacidadeDeYurts();
-	}
-
-	void colocarYurt(Jogador jogador) {
-		yurts.add(jogador);
-	}
-
-	boolean temYurtDe(Jogador jogador) {
-		return yurts.contains(jogador);
-	}
-
-	int quantidadeDeYurts() {
-		return yurts.size();
-	}
+    void sair(Jogador jogador) {
+        ocupantes.remove(jogador.getCor());
+    }
 }

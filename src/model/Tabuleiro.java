@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Regras de grafo, movimento e associação entre paradas e províncias. */
 class Tabuleiro {
     static final String KARAKORUM = "KARAKORUM";
 
@@ -82,7 +81,6 @@ class Tabuleiro {
             atual = proxima;
         }
 
-        // Paradas ocupadas podem ser atravessadas; a capacidade só restringe o destino final.
         if (!atual.temEspacoPara(jogador)) {
             return false;
         }

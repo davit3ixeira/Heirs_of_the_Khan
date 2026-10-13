@@ -10,7 +10,6 @@ import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
 
-/** Testes unitários das regras de movimento e tributos implementadas nesta etapa. */
 public class JogoTest {
     private Jogo jogo;
 

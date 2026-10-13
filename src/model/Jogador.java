@@ -1,89 +1,77 @@
 package model;
 
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/** Estado do jogador mantido oculto dos componentes externos ao pacote. */
 class Jogador {
-	static final int YURTS_INICIAIS = 12;
+    private final String cor;
+    private Parada paradaAtual;
+    private final Map<TipoTributo, Integer> tributos = new HashMap<>();
+    private final Set<String> paradasVisitadasNoTurno = new LinkedHashSet<>();
 
-	private final Cor cor;
-	private final Map<TipoTributo, Integer> tributos = new HashMap<TipoTributo, Integer>();
-	private final Map<TipoTesouro, Integer> tesouros = new HashMap<TipoTesouro, Integer>();
-	private final Set<Coluna> colunasUsadas = new HashSet<Coluna>();
-	private Parada posicao;
-	private int yurtsNaReserva = YURTS_INICIAIS;
-	private int votos;
+    Jogador(String cor, Parada inicial) {
+        this.cor = cor;
+        this.paradaAtual = inicial;
+        inicial.entrar(this);
+    }
 
-	Jogador(Cor cor, Parada posicao) {
-		this.cor = cor;
-		this.posicao = posicao;
-		for (TipoTributo tipo : TipoTributo.values()) {
-			tributos.put(tipo, 0);
-		}
-		for (TipoTesouro tipo : TipoTesouro.values()) {
-			tesouros.put(tipo, 0);
-		}
-	}
+    String getCor() {
+        return cor;
+    }
 
-	Cor getCor() {
-		return cor;
-	}
+    Parada getParadaAtual() {
+        return paradaAtual;
+    }
 
-	Parada getPosicao() {
-		return posicao;
-	}
+    void iniciarTurno() {
+        paradasVisitadasNoTurno.clear();
+        paradasVisitadasNoTurno.add(paradaAtual.getId());
+    }
 
-	void setPosicao(Parada posicao) {
-		this.posicao = posicao;
-	}
+    void irPara(Parada destino, List<Parada> paradasPercorridas) {
+        if (paradasVisitadasNoTurno.isEmpty()) {
+            paradasVisitadasNoTurno.add(paradaAtual.getId());
+        }
+        paradaAtual.sair(this);
+        paradaAtual = destino;
+        destino.entrar(this);
 
-	int getTributos(TipoTributo tipo) {
-		return tributos.get(tipo);
-	}
+        for (Parada parada : paradasPercorridas) {
+            paradasVisitadasNoTurno.add(parada.getId());
+        }
+    }
 
-	void adicionarTributos(TipoTributo tipo, int n) {
-		tributos.put(tipo, tributos.get(tipo) + n);
-	}
+    boolean esteveEmParadaAdjacenteA(String provinciaId, Tabuleiro tabuleiro) {
+        for (String paradaId : paradasVisitadasNoTurno) {
+            if (tabuleiro.paradaTemProvinciaAdjacente(paradaId, provinciaId)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-	int getTesouros(TipoTesouro tipo) {
-		return tesouros.get(tipo);
-	}
+    void adicionarTributo(TipoTributo tipo) {
+        tributos.merge(tipo, 1, Integer::sum);
+    }
 
-	void adicionarTesouros(TipoTesouro tipo, int n) {
-		tesouros.put(tipo, tesouros.get(tipo) + n);
-	}
+    int quantidadeTributo(TipoTributo tipo) {
+        return tributos.getOrDefault(tipo, 0);
+    }
 
-	int getYurtsNaReserva() {
-		return yurtsNaReserva;
-	}
-
-	boolean retirarYurtDaReserva() {
-		if (yurtsNaReserva < 1) {
-			return false;
-		}
-		yurtsNaReserva--;
-		return true;
-	}
-
-	int getVotos() {
-		return votos;
-	}
-
-	void adicionarVotos(int n) {
-		votos += n;
-	}
-
-	boolean colunaDisponivel(Coluna coluna) {
-		return !colunasUsadas.contains(coluna);
-	}
-
-	void usarColuna(Coluna coluna) {
-		if (coluna == Coluna.branca) {
-			colunasUsadas.clear();
-		} else {
-			colunasUsadas.add(coluna);
-		}
-	}
+    boolean gastarTributos(TipoTributo tipo, int quantidade) {
+        int atual = quantidadeTributo(tipo);
+        if (tipo == null || quantidade <= 0 || atual < quantidade) {
+            return false;
+        }
+        if (atual == quantidade) {
+            tributos.remove(tipo);
+        } else {
+            tributos.put(tipo, atual - quantidade);
+        }
+        return true;
+    }
 }
