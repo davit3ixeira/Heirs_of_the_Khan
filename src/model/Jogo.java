@@ -1,348 +1,302 @@
 package model;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
+/**
+ * Papel da classe: Fachada do jogo: reúne o tabuleiro e os jogadores e expõe as ações de um turno
+ * (iniciar turno, mover, pegar tributos e gastá-los).
+ *
+ * Por que existe no jogo: É o ponto de entrada das regras. Quem usa o modelo (interface ou testes)
+ * fala só com esta classe, que valida e delega o trabalho.
+ */
 public class Jogo {
-	static final int MIN_JOGADORES = 2;
-	static final int MAX_JOGADORES = 5;
-	static final int TESOUROS_POR_TIPO = 8;
-	static final int TESOUROS_POR_CIDADE = 4;
-	static final int CIDADES_REVELADAS = 3;
+    /**
+     * O que é: Limite de jogadores da partida.
+     *
+     * Por que importa no jogo: O jogo é para 2 a 5 jogadores. Cada um precisa de uma cor, com o seu
+     * tabuleiro, as suas fichas e os seus yurts.
+     */
+    private static final int MAX_JOGADORES = 5;
 
-	private final Mapa mapa;
-	private final boolean embaralhar;
-	private final List<Jogador> jogadores = new ArrayList<Jogador>();
-	private final Map<Cor, Jogador> jogadoresPorCor = new HashMap<Cor, Jogador>();
-	private final List<TipoTesouro> pilhaDeTesouros = new ArrayList<TipoTesouro>();
-	private final List<Cidade> pilhaDeCidades = new ArrayList<Cidade>();
-	private int vez;
-	private Turno turno;
-	private int votosTotais;
-	private boolean fimDisparado;
+    private final Tabuleiro tabuleiro = new Tabuleiro();
+    private final Map<String, Jogador> jogadores = new HashMap<>();
 
-	public Jogo(Cor[] cores) throws JogadaInvalidaException {
-		this(MapaPadrao.criar(), cores, true);
-	}
+    /**
+     * O que faz: Cria o jogo com um mapa mínimo de demonstração: Karakorum ligada a P1 (simples) e
+     * P2 (dupla), e P1 ligada a P3 (simples).
+     *
+     * Por que importa no jogo: Oferece uma rede pequena para exercitar as regras de movimento:
+     * parada simples, parada dupla, atravessar uma parada ocupada e o limite de movimentos. O mapa
+     * real do Império Mongol ainda não está montado aqui.
+     */
+    public Jogo() {
+        tabuleiro.adicionarParada("P1", 1);
+        tabuleiro.adicionarParada("P2", 2);
+        tabuleiro.adicionarParada("P3", 1);
+        tabuleiro.ligarParadas(Tabuleiro.KARAKORUM, "P1");
+        tabuleiro.ligarParadas(Tabuleiro.KARAKORUM, "P2");
+        tabuleiro.ligarParadas("P1", "P3");
+    }
 
-	Jogo(Mapa mapa, Cor[] cores) throws JogadaInvalidaException {
-		this(mapa, cores, false);
-	}
+    /**
+     * O que faz: Cadastra um jogador novo em Karakorum. Lança exceção se a cor for vazia, repetida
+     * ou se já houver 5 jogadores.
+     *
+     * Por que importa no jogo: Cada jogador escolhe uma cor única e a partida aceita de 2 a 5
+     * jogadores. Todos começam em Karakorum. A cor funciona como a identidade de quem joga.
+     */
+    public void adicionarJogador(String cor) {
+        if (cor == null || cor.isBlank()) {
+            throw new IllegalArgumentException("A cor do jogador não pode ser vazia.");
+        }
+        if (jogadores.containsKey(cor)) {
+            throw new IllegalArgumentException("Já existe um jogador com essa cor.");
+        }
+        if (jogadores.size() >= MAX_JOGADORES) {
+            throw new IllegalStateException("O jogo aceita no máximo cinco jogadores.");
+        }
+        jogadores.put(cor, new Jogador(cor, tabuleiro.getParada(Tabuleiro.KARAKORUM)));
+    }
 
-	private Jogo(Mapa mapa, Cor[] cores, boolean embaralhar) throws JogadaInvalidaException {
-		validar(cores);
-		this.mapa = mapa;
-		this.embaralhar = embaralhar;
-		for (int i = 0; i < cores.length; i++) {
-			Jogador jogador = new Jogador(cores[i], mapa.getKarakorum());
-			jogador.adicionarTributos(TipoTributo.moeda, moedasIniciais(i));
-			jogadores.add(jogador);
-			jogadoresPorCor.put(cores[i], jogador);
-		}
-		for (TipoTesouro tipo : TipoTesouro.values()) {
-			for (int i = 0; i < TESOUROS_POR_TIPO; i++) {
-				pilhaDeTesouros.add(tipo);
-			}
-		}
-		pilhaDeCidades.addAll(mapa.getCidades());
-		for (int i = 0; i < CIDADES_REVELADAS; i++) {
-			revelarProximaCidade();
-		}
-		for (Provincia provincia : mapa.getProvincias()) {
-			provincia.adicionarPeca();
-		}
-	}
+    /**
+     * O que faz: Repassa ao tabuleiro a criação de uma parada.
+     *
+     * Por que importa no jogo: Permite montar o mapa pela fachada, definindo paradas simples ou
+     * duplas.
+     */
+    public boolean adicionarParada(String id, int capacidade) {
+        return tabuleiro.adicionarParada(id, capacidade);
+    }
 
-	private static void validar(Cor[] cores) throws JogadaInvalidaException {
-		if (cores == null || cores.length < MIN_JOGADORES || cores.length > MAX_JOGADORES) {
-			throw new JogadaInvalidaException("A partida precisa de " + MIN_JOGADORES + " a " + MAX_JOGADORES + " jogadores.");
-		}
-		Set<Cor> usadas = new HashSet<Cor>();
-		for (Cor cor : cores) {
-			if (cor == null || !usadas.add(cor)) {
-				throw new JogadaInvalidaException("Cada jogador precisa de uma cor diferente.");
-			}
-		}
-	}
+    /**
+     * O que faz: Repassa ao tabuleiro a criação de uma rota entre duas paradas.
+     *
+     * Por que importa no jogo: As rotas definem por onde os peões se movem.
+     */
+    public boolean ligarParadas(String idA, String idB) {
+        return tabuleiro.ligarParadas(idA, idB);
+    }
 
-	private static int moedasIniciais(int ordem) {
-		if (ordem < 2) {
-			return 1;
-		}
-		return 2;
-	}
+    /**
+     * O que faz: Repassa ao tabuleiro a criação de uma província.
+     *
+     * Por que importa no jogo: Cria as áreas que fornecem tributos.
+     */
+    public boolean adicionarProvincia(String id) {
+        return tabuleiro.adicionarProvincia(id);
+    }
 
-	private static int limiteDeVotos(int jogadores) {
-		switch (jogadores) {
-		case 2:
-			return 10;
-		case 3:
-			return 14;
-		case 4:
-			return 16;
-		default:
-			return 17;
-		}
-	}
+    /**
+     * O que faz: Repassa ao tabuleiro a ligação entre uma parada e uma província vizinha.
+     *
+     * Por que importa no jogo: Define de onde se pode coletar tributos cada vez que um peão passa
+     * por aquela parada.
+     */
+    public boolean associarProvincia(String paradaId, String provinciaId) {
+        return tabuleiro.associarProvincia(paradaId, provinciaId);
+    }
 
-	private int sortear(int n) {
-		if (!embaralhar) {
-			return 0;
-		}
-		return (int) (Math.random() * n);
-	}
+    /**
+     * O que faz: Marca o início do turno do jogador. Devolve false se a cor não existir.
+     *
+     * Por que importa no jogo: Cada turno recomeça o histórico de paradas visitadas, que determina
+     * de quais províncias o jogador pode pegar tributos naquele turno.
+     */
+    public boolean iniciarTurno(String cor) {
+        Jogador jogador = jogadores.get(cor);
+        if (jogador == null) {
+            return false;
+        }
+        jogador.iniciarTurno();
+        return true;
+    }
 
-	private void revelarProximaCidade() {
-		if (pilhaDeCidades.isEmpty()) {
-			return;
-		}
-		Cidade cidade = pilhaDeCidades.remove(sortear(pilhaDeCidades.size()));
-		List<TipoTesouro> tesouros = new ArrayList<TipoTesouro>();
-		for (int i = 0; i < TESOUROS_POR_CIDADE && !pilhaDeTesouros.isEmpty(); i++) {
-			tesouros.add(pilhaDeTesouros.remove(sortear(pilhaDeTesouros.size())));
-		}
-		cidade.revelar(tesouros);
-	}
+    /**
+     * O que faz: Atalho para mover o jogador a uma única parada vizinha (limite de 1 movimento).
+     *
+     * Por que importa no jogo: Corresponde à ação 'Mover' com um único movimento, o caso mais
+     * simples. Rejeita destino nulo.
+     */
+    public boolean moverJogador(String cor, String destino) {
+        if (destino == null) {
+            return false;
+        }
+        return moverJogador(cor, List.of(destino), 1);
+    }
 
-	public void iniciarTurno(Coluna coluna) throws JogadaInvalidaException {
-		if (turno != null) {
-			throw new JogadaInvalidaException("Ja existe um turno em andamento.");
-		}
-		Jogador jogador = jogadores.get(vez);
-		if (!jogador.colunaDisponivel(coluna)) {
-			throw new JogadaInvalidaException("A coluna " + coluna + " ja foi usada; ative a coluna branca para libera-la.");
-		}
-		jogador.usarColuna(coluna);
-		turno = new Turno(jogador, coluna);
-	}
+    /**
+     * O que faz: Move o jogador por um percurso de várias paradas, respeitando o limite de
+     * movimentos. Devolve false se a cor não existir ou se o movimento for inválido.
+     *
+     * Por que importa no jogo: O limite vem do número de cavalos da coluna ativada (e das melhorias
+     * e peças de bônus). Permite andar várias paradas em uma ação, atravessando paradas ocupadas
+     * desde que o destino final tenha espaço.
+     */
+    public boolean moverJogador(String cor, List<String> percurso, int limiteMovimentos) {
+        Jogador jogador = jogadores.get(cor);
+        if (jogador == null) {
+            return false;
+        }
+        return tabuleiro.moverJogador(jogador, percurso, limiteMovimentos);
+    }
 
-	public void mover(String destino) throws JogadaInvalidaException {
-		exigirTurno();
-		Jogador jogador = turno.getJogador();
-		Parada alvo = paradaExistente(destino);
-		if (turno.getMovimentos() < 1) {
-			throw new JogadaInvalidaException("Nao ha movimentos restantes neste turno.");
-		}
-		if (!mapa.alcancaveisComUmMovimento(jogador.getPosicao(), jogador).contains(alvo)) {
-			throw new JogadaInvalidaException("A parada " + destino + " nao e alcancavel com um movimento.");
-		}
-		jogador.setPosicao(alvo);
-		turno.registrarMovimento(alvo);
-	}
+    /**
+     * O que faz: Executa a coleta de tributos em duas fases, validando tudo antes de alterar
+     * qualquer coisa. (1) cada escolha deve apontar uma província existente e um tipo válido, e o
+     * jogador deve ter estado numa parada adjacente a ela neste turno; (2) cada província deve ter
+     * peças suficientes para o total pedido. Só depois as peças saem das províncias e vão para o
+     * jogador. Rejeita se o número de escolhas passar do limite de peças.
+     *
+     * Por que importa no jogo: É a ação 'Pegar peças de tributo'. O limite de peças é o número de
+     * punhos da coluna. A regra permite pegar mais de uma peça da mesma província, mas só das
+     * adjacentes ao que foi visitado no turno e só se existirem. O tudo ou nada evita coletas
+     * parciais.
+     */
+    public boolean coletarTributos(String cor, int limiteDePecas, List<EscolhaTributo> escolhas) {
+        Jogador jogador = jogadores.get(cor);
+        if (jogador == null || escolhas == null || limiteDePecas < 0
+                || escolhas.size() > limiteDePecas) {
+            return false;
+        }
 
-	public void pegarTributo(String idProvincia) throws JogadaInvalidaException {
-		exigirTurno();
-		Provincia provincia = mapa.getProvincia(idProvincia);
-		if (provincia == null) {
-			throw new JogadaInvalidaException("Provincia inexistente: " + idProvincia + ".");
-		}
-		if (turno.getAcoesDeTributo() < 1) {
-			throw new JogadaInvalidaException("Nao ha acoes de tributo restantes.");
-		}
-		if (!provincia.adjacenteA(turno.getVisitadas())) {
-			throw new JogadaInvalidaException("A provincia " + idProvincia + " nao e adjacente a uma parada visitada.");
-		}
-		if (provincia.getPecas() < 1) {
-			throw new JogadaInvalidaException("A provincia " + idProvincia + " nao tem tributos.");
-		}
-		provincia.retirarPeca();
-		turno.consumirAcaoDeTributo();
-		turno.getJogador().adicionarTributos(provincia.getIcone(), 1);
-	}
+        Map<Provincia, Map<TipoTributo, Integer>> quantidadesSolicitadas = new HashMap<>();
+        for (EscolhaTributo escolha : escolhas) {
+            if (escolha == null) {
+                return false;
+            }
+            Provincia provincia = tabuleiro.getProvincia(escolha.getProvinciaId());
+            TipoTributo tipo = TipoTributo.interpretar(escolha.getTipo());
+            if (provincia == null || tipo == null
+                    || !jogador.esteveEmParadaAdjacenteA(provincia.getId(), tabuleiro)) {
+                return false;
+            }
+            quantidadesSolicitadas.computeIfAbsent(provincia, p -> new HashMap<>())
+                    .merge(tipo, 1, Integer::sum);
+        }
 
-	public void atacarCidade(String nome, TipoTesouro tesouro) throws JogadaInvalidaException {
-		exigirTurno();
-		Jogador jogador = turno.getJogador();
-		Cidade cidade = mapa.getCidade(nome);
-		if (cidade == null || !cidade.isRevelada() || cidade.getTesouros().isEmpty()) {
-			throw new JogadaInvalidaException("A cidade " + nome + " nao tem tesouros para atacar.");
-		}
-		if (!cidade.adjacenteA(turno.getVisitadas())) {
-			throw new JogadaInvalidaException("A cidade " + nome + " nao e adjacente a uma parada visitada.");
-		}
-		if (!cidade.getTesouros().contains(tesouro)) {
-			throw new JogadaInvalidaException("A cidade " + nome + " nao tem o tesouro " + tesouro + ".");
-		}
-		int custo = 2;
-		if (turno.ataquesEm(cidade) == 0) {
-			custo = 1;
-		}
-		if (jogador.getTributos(TipoTributo.espada) < custo) {
-			throw new JogadaInvalidaException("Sao necessarias " + custo + " espadas para este ataque.");
-		}
-		jogador.adicionarTributos(TipoTributo.espada, -custo);
-		cidade.getTesouros().remove(tesouro);
-		jogador.adicionarTesouros(tesouro, 1);
-		turno.registrarAtaque(cidade);
-		if (cidade.getTesouros().isEmpty()) {
-			cidade.conquistar(jogador);
-			jogador.retirarYurtDaReserva();
-			revelarProximaCidade();
-		}
-	}
+        for (Map.Entry<Provincia, Map<TipoTributo, Integer>> entrada
+                : quantidadesSolicitadas.entrySet()) {
+            for (Map.Entry<TipoTributo, Integer> tipo : entrada.getValue().entrySet()) {
+                if (entrada.getKey().quantidade(tipo.getKey()) < tipo.getValue()) {
+                    return false;
+                }
+            }
+        }
 
-	public void construirYurt(String idParada) throws JogadaInvalidaException {
-		exigirTurno();
-		Jogador jogador = turno.getJogador();
-		Parada parada = paradaExistente(idParada);
-		if (parada.isKarakorum()) {
-			throw new JogadaInvalidaException("Nao e permitido construir yurt em Karakorum.");
-		}
-		if (!turno.getVisitadas().contains(parada)) {
-			throw new JogadaInvalidaException("A parada " + idParada + " nao foi visitada neste turno.");
-		}
-		if (!parada.cabeYurt()) {
-			throw new JogadaInvalidaException("A parada " + idParada + " nao comporta mais yurts.");
-		}
-		if (jogador.getTributos(TipoTributo.yurt) < 1) {
-			throw new JogadaInvalidaException("E necessario 1 tributo de yurt.");
-		}
-		if (!jogador.retirarYurtDaReserva()) {
-			throw new JogadaInvalidaException("Nao ha yurts na reserva.");
-		}
-		jogador.adicionarTributos(TipoTributo.yurt, -1);
-		parada.colocarYurt(jogador);
-	}
+        for (EscolhaTributo escolha : escolhas) {
+            Provincia provincia = tabuleiro.getProvincia(escolha.getProvinciaId());
+            TipoTributo tipo = TipoTributo.interpretar(escolha.getTipo());
+            provincia.removerTributo(tipo);
+            jogador.adicionarTributo(tipo);
+        }
+        return true;
+    }
 
-	public void entregarTesouros(TipoTesouro[] tesouros) throws JogadaInvalidaException {
-		exigirTurno();
-		Jogador jogador = turno.getJogador();
-		Demanda demanda = jogador.getPosicao().getDemanda();
-		if (demanda == null) {
-			throw new JogadaInvalidaException("O peao nao esta numa parada de conselheiro.");
-		}
-		Map<TipoTesouro, Integer> entregues = new HashMap<TipoTesouro, Integer>();
-		for (TipoTesouro tesouro : tesouros) {
-			entregues.put(tesouro, Demanda.quantidade(entregues, tesouro) + 1);
-		}
-		for (TipoTesouro tipo : entregues.keySet()) {
-			if (jogador.getTesouros(tipo) < entregues.get(tipo)) {
-				throw new JogadaInvalidaException("O jogador nao possui tesouros suficientes do tipo " + tipo + ".");
-			}
-		}
-		if (!demanda.atende(entregues)) {
-			throw new JogadaInvalidaException("Os tesouros entregues nao atendem ao pedido do conselheiro.");
-		}
-		for (TipoTesouro tipo : entregues.keySet()) {
-			jogador.adicionarTesouros(tipo, -entregues.get(tipo));
-		}
-		ganharVotos(jogador, demanda.votos());
-	}
+    /**
+     * O que faz: Coloca peças de tributo numa província, respeitando o limite de 3 peças.
+     *
+     * Por que importa no jogo: Serve para a preparação (1 peça por província, conforme os símbolos
+     * do tabuleiro) e para montar cenários de teste.
+     */
+    public boolean colocarTributosIniciais(String provinciaId, String tipo, int quantidade) {
+        Provincia provincia = tabuleiro.getProvincia(provinciaId);
+        TipoTributo tributo = TipoTributo.interpretar(tipo);
+        return provincia != null && provincia.adicionarTributos(tributo, quantidade);
+    }
 
-	public void finalizarTurno() throws JogadaInvalidaException {
-		exigirTurno();
-		Parada posicao = turno.getJogador().getPosicao();
-		if (peoesEm(posicao) > posicao.capacidadeDePeoes()) {
-			throw new JogadaInvalidaException("O peao nao pode terminar o turno na parada ocupada " + posicao.getId() + ".");
-		}
-		turno = null;
-		vez = (vez + 1) % jogadores.size();
-	}
+    /**
+     * O que faz: Informa quantas peças de um tipo há na província, ou -1 se a província ou o tipo
+     * forem inválidos.
+     *
+     * Por que importa no jogo: Permite saber o que ainda pode ser pego e conferir o efeito de uma
+     * coleta. O -1 diferencia 'inválido' de 'nenhuma peça' (0).
+     */
+    public int quantidadeTributoNaProvincia(String provinciaId, String tipo) {
+        Provincia provincia = tabuleiro.getProvincia(provinciaId);
+        TipoTributo tributo = TipoTributo.interpretar(tipo);
+        return provincia == null || tributo == null ? -1 : provincia.quantidade(tributo);
+    }
 
-	void ganharVotos(Jogador jogador, int votos) {
-		jogador.adicionarVotos(votos);
-		votosTotais += votos;
-		if (votosTotais >= limiteDeVotos(jogadores.size())) {
-			fimDisparado = true;
-		}
-	}
+    /**
+     * O que faz: Informa quantas peças de um tipo o jogador guarda, ou -1 se o jogador ou o tipo
+     * forem inválidos.
+     *
+     * Por que importa no jogo: Mostra os recursos disponíveis para atacar cidades (espadas),
+     * construir yurts ou comprar melhorias (moedas).
+     */
+    public int quantidadeTributoDoJogador(String cor, String tipo) {
+        Jogador jogador = jogadores.get(cor);
+        TipoTributo tributo = TipoTributo.interpretar(tipo);
+        return jogador == null || tributo == null ? -1 : jogador.quantidadeTributo(tributo);
+    }
 
-	private int peoesEm(Parada parada) {
-		int peoes = 0;
-		for (Jogador jogador : jogadores) {
-			if (jogador.getPosicao() == parada) {
-				peoes++;
-			}
-		}
-		return peoes;
-	}
+    /**
+     * O que faz: Consome peças de tributo do jogador, se ele tiver a quantidade pedida. Devolve
+     * false se a cor ou o tipo forem inválidos ou se o saldo não bastar.
+     *
+     * Por que importa no jogo: É o pagamento das ações: 1 espada para tomar um tesouro (2 para os
+     * seguintes no mesmo turno), 2 moedas por melhoria, e 1 yurt para cada construção.
+     */
+    public boolean gastarTributos(String cor, String tipo, int quantidade) {
+        Jogador jogador = jogadores.get(cor);
+        TipoTributo tributo = TipoTributo.interpretar(tipo);
+        return jogador != null && tributo != null && jogador.gastarTributos(tributo, quantidade);
+    }
 
-	private void exigirTurno() throws JogadaInvalidaException {
-		if (turno == null) {
-			throw new JogadaInvalidaException("Nenhum turno em andamento.");
-		}
-	}
+    /**
+     * O que faz: Devolve o identificador da parada em que o jogador está, ou null se a cor não
+     * existir.
+     *
+     * Por que importa no jogo: Permite saber onde cada peão está, o que decide os movimentos
+     * possíveis, a ocupação das paradas e quais províncias estão ao alcance.
+     */
+    public String paradaDe(String cor) {
+        Jogador jogador = jogadores.get(cor);
+        return jogador == null ? null : jogador.getParadaAtual().getId();
+    }
 
-	private Parada paradaExistente(String id) throws JogadaInvalidaException {
-		Parada parada = mapa.getParada(id);
-		if (parada == null) {
-			throw new JogadaInvalidaException("Parada inexistente: " + id + ".");
-		}
-		return parada;
-	}
+    /**
+     * Papel da classe: Objeto simples que descreve uma escolha de coleta: de qual província e qual
+     * tipo de tributo.
+     *
+     * Por que existe no jogo: Ao pegar tributos o jogador escolhe peça a peça. Esta classe empacota
+     * cada escolha (província e tipo) para o jogo validar todas de uma vez.
+     */
+    public static final class EscolhaTributo {
+        private final String provinciaId;
+        private final String tipo;
 
-	public Cor getJogadorDaVez() {
-		return jogadores.get(vez).getCor();
-	}
+        /**
+         * O que faz: Cria uma escolha de coleta com a província e o tipo desejados.
+         *
+         * Por que importa no jogo: Cada escolha equivale a uma das ações de 'pegar peça de tributo'
+         * da coluna ativada.
+         */
+        public EscolhaTributo(String provinciaId, String tipo) {
+            this.provinciaId = provinciaId;
+            this.tipo = tipo;
+        }
 
-	public String getPosicao(Cor cor) {
-		return jogadoresPorCor.get(cor).getPosicao().getId();
-	}
+        /**
+         * O que faz: Devolve a província escolhida.
+         *
+         * Por que importa no jogo: O jogo confere se ela existe e se está ao alcance das paradas
+         * visitadas no turno.
+         */
+        public String getProvinciaId() {
+            return provinciaId;
+        }
 
-	public int getMovimentosRestantes() {
-		if (turno == null) {
-			return 0;
-		}
-		return turno.getMovimentos();
-	}
-
-	public int getTributos(Cor cor, TipoTributo tipo) {
-		return jogadoresPorCor.get(cor).getTributos(tipo);
-	}
-
-	public int getTesouros(Cor cor, TipoTesouro tipo) {
-		return jogadoresPorCor.get(cor).getTesouros(tipo);
-	}
-
-	public int getVotos(Cor cor) {
-		return jogadoresPorCor.get(cor).getVotos();
-	}
-
-	public int getYurtsNaReserva(Cor cor) {
-		return jogadoresPorCor.get(cor).getYurtsNaReserva();
-	}
-
-	public boolean isColunaDisponivel(Cor cor, Coluna coluna) {
-		return jogadoresPorCor.get(cor).colunaDisponivel(coluna);
-	}
-
-	public int getPecasNaProvincia(String id) {
-		return mapa.getProvincia(id).getPecas();
-	}
-
-	public int getYurtsNaParada(String id) {
-		return mapa.getParada(id).quantidadeDeYurts();
-	}
-
-	public int getTesourosNaCidade(String nome) {
-		return mapa.getCidade(nome).getTesouros().size();
-	}
-
-	public boolean isCidadeRevelada(String nome) {
-		return mapa.getCidade(nome).isRevelada();
-	}
-
-	public Cor getConquistador(String nome) {
-		Jogador conquistador = mapa.getCidade(nome).getConquistador();
-		if (conquistador == null) {
-			return null;
-		}
-		return conquistador.getCor();
-	}
-
-	public boolean isFimDisparado() {
-		return fimDisparado;
-	}
-
-	Jogador getJogador(Cor cor) {
-		return jogadoresPorCor.get(cor);
-	}
-
-	Mapa getMapa() {
-		return mapa;
-	}
+        /**
+         * O que faz: Devolve o tipo de tributo escolhido, em texto.
+         *
+         * Por que importa no jogo: O jogo converte o texto em TipoTributo e verifica se a província
+         * tem a peça.
+         */
+        public String getTipo() {
+            return tipo;
+        }
+    }
 }

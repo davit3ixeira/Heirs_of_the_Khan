@@ -10,34 +10,76 @@ import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
 
-/** Testes unitários das regras de movimento e tributos implementadas nesta etapa. */
+/**
+ * Casos de teste das regras de movimento e tributos.
+ * Cada caso registra o cenário/ação e o resultado esperado; o @Before cria um
+ * jogo novo com os jogadores vermelho e azul, salvo quando o teste adiciona outros.
+ */
 public class JogoTest {
     private Jogo jogo;
 
     @Before
+    /**
+     * O que faz: Antes de cada teste, cria um jogo novo com os jogadores vermelho e azul.
+     *
+     * Por que importa no jogo: Cada cenário parte da preparação padrão (todos em Karakorum, sem
+     * tributos coletados). Assim os testes ficam independentes entre si e as regras são verificadas
+     * do zero.
+     */
     public void preparar() {
         jogo = new Jogo();
         jogo.adicionarJogador("vermelho");
         jogo.adicionarJogador("azul");
     }
 
+    /**
+     * CT01 — Posição inicial.
+     * Pré-condição: fixture padrão; ação: consultar a posição de vermelho.
+     * Esperado: retorno igual a "KARAKORUM".
+     *
+     * Regra do jogo: na preparação, todos os peões são colocados em Karakorum, a capital mongol.
+     */
     @Test
     public void jogadorComecaEmKarakorum() {
         assertEquals("KARAKORUM", jogo.paradaDe("vermelho"));
     }
 
+    /**
+     * CT02 — Movimento para parada vizinha livre.
+     * Pré-condição: vermelho em KARAKORUM; ação: mover para P1.
+     * Esperado: movimento aceito e nova posição igual a P1.
+     *
+     * Regra do jogo: mover-se é mexer o peão para uma parada adjacente, e Karakorum tem rota até
+     * P1.
+     */
     @Test
     public void moveParaParadaVizinhaLivre() {
         assertTrue(jogo.moverJogador("vermelho", "P1"));
         assertEquals("P1", jogo.paradaDe("vermelho"));
     }
 
+    /**
+     * CT03 — Tentativa de movimento não adjacente.
+     * Pré-condição: vermelho em KARAKORUM; ação: tentar mover diretamente para P3.
+     * Esperado: movimento rejeitado e posição mantida em KARAKORUM.
+     *
+     * Regra do jogo: cada movimento leva só a uma parada adjacente, então não dá para ir de
+     * Karakorum a P3 em um passo.
+     */
     @Test
     public void naoMoveParaParadaNaoVizinha() {
         assertFalse(jogo.moverJogador("vermelho", "P3"));
         assertEquals("KARAKORUM", jogo.paradaDe("vermelho"));
     }
 
+    /**
+     * CT04 — Entrada em parada simples ocupada.
+     * Pré-condição: vermelho ocupa P1; ação: azul tenta terminar em P1.
+     * Esperado: tentativa rejeitada e azul permanece em KARAKORUM.
+     *
+     * Regra do jogo: não se pode terminar o movimento numa parada ocupada por outro jogador, exceto
+     * nas paradas duplas e em Karakorum.
+     */
     @Test
     public void naoTerminaEmParadaSimplesOcupada() {
         assertTrue(jogo.moverJogador("vermelho", "P1"));
@@ -45,12 +87,28 @@ public class JogoTest {
         assertEquals("KARAKORUM", jogo.paradaDe("azul"));
     }
 
+    /**
+     * CT05 — Uso da capacidade dupla.
+     * Pré-condição: P2 tem capacidade dois; ação: vermelho e azul entram em P2.
+     * Esperado: os dois movimentos são aceitos.
+     *
+     * Regra do jogo: as paradas duplas comportam 2 peões, então os dois jogadores podem terminar o
+     * movimento ali.
+     */
     @Test
     public void podeTerminarEmParadaDuplaComOutroJogador() {
         assertTrue(jogo.moverJogador("vermelho", "P2"));
         assertTrue(jogo.moverJogador("azul", "P2"));
     }
 
+    /**
+     * CT06 — Tentativa de exceder a capacidade.
+     * Pré-condição: vermelho e azul ocupam P2; ação: verde também tenta entrar.
+     * Esperado: tentativa rejeitada e verde permanece em KARAKORUM.
+     *
+     * Regra do jogo: a parada dupla comporta só 2 peões. Com ela cheia, o terceiro jogador não pode
+     * terminar o movimento ali.
+     */
     @Test
     public void terceiroJogadorNaoPodeTerminarEmParadaDuplaCheia() {
         jogo.adicionarJogador("verde");
@@ -60,18 +118,42 @@ public class JogoTest {
         assertEquals("KARAKORUM", jogo.paradaDe("verde"));
     }
 
+    /**
+     * CT07 — Percurso com passos dentro do limite.
+     * Pré-condição: vermelho em KARAKORUM; ação: percorrer P1 e P3 com limite dois.
+     * Esperado: percurso aceito e posição final igual a P3.
+     *
+     * Regra do jogo: o número de cavalos define quantos movimentos se fazem. Ir de Karakorum a P3
+     * passando por P1 custa 2, e o limite de 2 permite.
+     */
     @Test
     public void percorreMaisDeUmaParadaDentroDoLimite() {
         assertTrue(jogo.moverJogador("vermelho", Arrays.asList("P1", "P3"), 2));
         assertEquals("P3", jogo.paradaDe("vermelho"));
     }
 
+    /**
+     * CT08 — Percurso acima do limite permitido.
+     * Pré-condição: vermelho em KARAKORUM; ação: solicitar dois passos com limite um.
+     * Esperado: percurso rejeitado e posição inalterada.
+     *
+     * Regra do jogo: não se pode se mover mais vezes do que o limite da ação. O jogador que excede
+     * o limite fica onde estava.
+     */
     @Test
     public void rejeitaPercursoMaiorQueLimiteSemMover() {
         assertFalse(jogo.moverJogador("vermelho", Arrays.asList("P1", "P3"), 1));
         assertEquals("KARAKORUM", jogo.paradaDe("vermelho"));
     }
 
+    /**
+     * CT09 — Passagem por parada ocupada.
+     * Pré-condição: azul ocupa P1; ação: vermelho atravessa P1 e segue até P3.
+     * Esperado: movimento aceito e vermelho termina em P3.
+     *
+     * Regra do jogo: o peão pode passar por uma parada ocupada por outro jogador. Só não pode
+     * terminar o movimento nela.
+     */
     @Test
     public void podeAtravessarParadaSimplesOcupadaSemTerminarNela() {
         assertTrue(jogo.moverJogador("azul", "P1"));
@@ -79,6 +161,13 @@ public class JogoTest {
         assertEquals("P3", jogo.paradaDe("vermelho"));
     }
 
+    /**
+     * CT10 — Limite de três peças por província.
+     * Pré-condição: província vazia; ação: inserir três tributos e tentar inserir um quarto.
+     * Esperado: quarto tributo rejeitado e total mantido em três.
+     *
+     * Regra do jogo: cada província comporta no máximo 3 peças de tributo.
+     */
     @Test
     public void provinciaNaoAceitaMaisDeTresPecas() {
         assertTrue(jogo.adicionarProvincia("Samarcanda"));
@@ -90,6 +179,14 @@ public class JogoTest {
                 + jogo.quantidadeTributoNaProvincia("Samarcanda", "ESPADA"));
     }
 
+    /**
+     * CT11 — Coleta válida de tributos adjacentes ao percurso.
+     * Pré-condição: província com espada e moeda, adjacente a P1; ação: visitar P1 e coletar ambas.
+     * Esperado: jogador recebe uma peça de cada tipo e a espada é removida da província.
+     *
+     * Regra do jogo: pegam-se peças de províncias adjacentes às paradas onde o jogador esteve no
+     * turno (antes, durante ou depois de mover), e as peças vão da província para o jogador.
+     */
     @Test
     public void coletaTributosAdjacentesAoPercursoETransfereAoJogador() {
         assertTrue(jogo.adicionarProvincia("Samarcanda"));
@@ -106,8 +203,17 @@ public class JogoTest {
         assertEquals(1, jogo.quantidadeTributoDoJogador("vermelho", "ESPADA"));
         assertEquals(1, jogo.quantidadeTributoDoJogador("vermelho", "MOEDA"));
         assertEquals(0, jogo.quantidadeTributoNaProvincia("Samarcanda", "ESPADA"));
+        assertEquals(0, jogo.quantidadeTributoNaProvincia("Samarcanda", "MOEDA"));
     }
 
+    /**
+     * CT12 — Coleta em província fora do percurso.
+     * Pré-condição: tributo em província adjacente a P2; ação: tentar coletar sem visitar P2.
+     * Esperado: coleta rejeitada e tributo permanece na província.
+     *
+     * Regra do jogo: só se pega tributo de província adjacente a uma parada onde o jogador esteve
+     * no turno. P2 não foi visitada.
+     */
     @Test
     public void naoColetaTributoDeProvinciaForaDoPercurso() {
         assertTrue(jogo.adicionarProvincia("China"));
@@ -120,6 +226,14 @@ public class JogoTest {
         assertEquals(1, jogo.quantidadeTributoNaProvincia("China", "YURT"));
     }
 
+    /**
+     * CT13 — Limite de peças por ação de coleta.
+     * Pré-condição: duas espadas disponíveis em província visitada; ação: solicitar duas com limite um.
+     * Esperado: solicitação rejeitada e ambas as espadas permanecem na província.
+     *
+     * Regra do jogo: o número de punhos da coluna ativada limita quantas peças se pegam por ação.
+     * Pedir 2 com limite 1 é recusado.
+     */
     @Test
     public void naoColetaMaisPecasDoQuePermiteAColuna() {
         assertTrue(jogo.adicionarProvincia("Samarcanda"));
@@ -134,6 +248,14 @@ public class JogoTest {
         assertEquals(2, jogo.quantidadeTributoNaProvincia("Samarcanda", "ESPADA"));
     }
 
+    /**
+     * CT14 — Validação do gasto de tributos.
+     * Pré-condição: vermelho possui uma espada; ação: tentar gastar duas e depois gastar uma.
+     * Esperado: primeiro gasto rejeitado, segundo aceito e saldo final igual a zero.
+     *
+     * Regra do jogo: as peças de tributo coletadas ficam guardadas com o jogador, que só pode
+     * gastar o que tem (por exemplo, a espada que ataca cidades).
+     */
     @Test
     public void jogadorSoPodeGastarTributosQuePossui() {
         assertTrue(jogo.adicionarProvincia("Samarcanda"));
