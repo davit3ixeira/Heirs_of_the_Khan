@@ -1,54 +1,59 @@
 package model;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 class Provincia {
-	static final int MAX_PECAS = 3;
+    static final int MAX_PECAS = 3;
 
-	private final String id;
-	private final TipoTributo icone;
-	private final List<Parada> paradas = new ArrayList<Parada>();
-	private int pecas;
+    private final String id;
+    private final Map<TipoTributo, Integer> pecas = new HashMap<>();
 
-	Provincia(String id, TipoTributo icone) {
-		this.id = id;
-		this.icone = icone;
-	}
+    Provincia(String id) {
+        this.id = id;
+    }
 
-	String getId() {
-		return id;
-	}
+    String getId() {
+        return id;
+    }
 
-	TipoTributo getIcone() {
-		return icone;
-	}
+    int total() {
+        int soma = 0;
+        for (int quantidade : pecas.values()) {
+            soma += quantidade;
+        }
+        return soma;
+    }
 
-	int getPecas() {
-		return pecas;
-	}
+    int quantidade(TipoTributo tipo) {
+        if (tipo == null) {
+            return 0;
+        }
+        return pecas.getOrDefault(tipo, 0);
+    }
 
-	void adicionarPeca() {
-		if (pecas < MAX_PECAS) {
-			pecas++;
-		}
-	}
+    boolean adicionarTributo(TipoTributo tipo) {
+        return adicionarTributos(tipo, 1);
+    }
 
-	void retirarPeca() {
-		pecas--;
-	}
+    boolean adicionarTributos(TipoTributo tipo, int quantidade) {
+        if (tipo == null || quantidade <= 0 || total() + quantidade > MAX_PECAS) {
+            return false;
+        }
+        pecas.merge(tipo, quantidade, Integer::sum);
+        return true;
+    }
 
-	void adicionarParada(Parada parada) {
-		paradas.add(parada);
-	}
-
-	boolean adjacenteA(Set<Parada> visitadas) {
-		for (Parada parada : paradas) {
-			if (visitadas.contains(parada)) {
-				return true;
-			}
-		}
-		return false;
-	}
+    boolean removerTributo(TipoTributo tipo) {
+        int atual = quantidade(tipo);
+        if (atual == 0) {
+            return false;
+        }
+        if (atual == 1) {
+            pecas.remove(tipo);
+        } else {
+            pecas.put(tipo, atual - 1);
+        }
+        return true;
+    }
 }
