@@ -40,7 +40,7 @@ class Jogador {
         destino.entrar(this);
 
         for (Parada parada : paradasPercorridas) {
-            paradasVisitadasNoTurno.add(parada.getId());
+            paradasVisitadasNoTurnopp.add(parada.getId());
         }
     }
 
