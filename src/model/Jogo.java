@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 public class Jogo {
     private static final int MAX_JOGADORES = 5;
@@ -15,26 +14,11 @@ public class Jogo {
     private final Map<String, Jogador> jogadores = new LinkedHashMap<>();
     private final List<String> ordemDosJogadores = new ArrayList<>();
     private int indiceDaVez = 0;
-
-    private final Random random = new Random();
-    private final int[] dados = new int[2];
-    private boolean dadosLancados = false;
+    private int colunaAtivada = -1;
+    private int movimentosRestantes = 0;
 
     public Jogo() {
-        this(true);
-    }
-
-    private Jogo(boolean redeDemonstrativa) {
-        if (!redeDemonstrativa) {
-            MapaPadrao.montar(tabuleiro);
-            return;
-        }
-        tabuleiro.adicionarParada("P1", 1);
-        tabuleiro.adicionarParada("P2", 2);
-        tabuleiro.adicionarParada("P3", 1);
-        tabuleiro.ligarParadas(Tabuleiro.KARAKORUM, "P1");
-        tabuleiro.ligarParadas(Tabuleiro.KARAKORUM, "P2");
-        tabuleiro.ligarParadas("P1", "P3");
+        MapaPadrao.montar(tabuleiro);
     }
 
     public void adicionarJogador(String cor) {
@@ -47,17 +31,9 @@ public class Jogo {
         if (jogadores.size() >= MAX_JOGADORES) {
             throw new IllegalStateException("O jogo aceita no máximo cinco jogadores.");
         }
-        jogadores.put(cor, new Jogador(cor, tabuleiro.getParada(Tabuleiro.KARAKORUM)));
+        Herdeiro herdeiro = Herdeiro.values()[jogadores.size()];
+        jogadores.put(cor, new Jogador(cor, herdeiro, tabuleiro.getParada(Tabuleiro.KARAKORUM)));
         ordemDosJogadores.add(cor);
-    }
-
-    public static Jogo novaPartida(List<String> cores) {
-        Jogo jogo = new Jogo(false);
-        for (String cor : cores) {
-            jogo.adicionarJogador(cor);
-        }
-        jogo.iniciarTurno(jogo.getJogadorDaVez());
-        return jogo;
     }
 
     public List<String> getCores() {
@@ -68,47 +44,64 @@ public class Jogo {
         return ordemDosJogadores.isEmpty() ? null : ordemDosJogadores.get(indiceDaVez);
     }
 
-    public void passarVez() {
-        if (ordemDosJogadores.isEmpty()) {
-            return;
-        }
-        indiceDaVez = (indiceDaVez + 1) % ordemDosJogadores.size();
-        dadosLancados = false;
-        iniciarTurno(getJogadorDaVez());
+    /** Número (1 a 5) do tabuleiro de jogador recebido pelo jogador. */
+    public int getNumeroDoTabuleiro(String cor) {
+        Jogador jogador = jogadores.get(cor);
+        return jogador == null ? -1 : jogador.getHerdeiro().ordinal() + 1;
     }
 
-    public boolean lancarDados() {
-        return definirDados(random.nextInt(6) + 1, random.nextInt(6) + 1);
+    public boolean colunaOcupada(String cor, int coluna) {
+        Jogador jogador = jogadores.get(cor);
+        return jogador != null && coluna >= 0 && coluna < Herdeiro.NUM_COLUNAS
+                && jogador.colunaOcupada(coluna);
     }
 
-    public boolean definirDados(int dado1, int dado2) {
-        if (dadosLancados || dado1 < 1 || dado1 > 6 || dado2 < 1 || dado2 > 6) {
+    public int getColunaAtivada() {
+        return colunaAtivada;
+    }
+
+    public int getMovimentosRestantes() {
+        return movimentosRestantes;
+    }
+
+    /** Coloca uma peça de ativação do jogador da vez numa coluna livre. */
+    public boolean ativarColuna(int coluna) {
+        Jogador jogador = jogadores.get(getJogadorDaVez());
+        if (jogador == null || colunaAtivada >= 0 || !jogador.ocuparColuna(coluna)) {
             return false;
         }
-        dados[0] = dado1;
-        dados[1] = dado2;
-        dadosLancados = true;
+        colunaAtivada = coluna;
+        movimentosRestantes = jogador.getHerdeiro().cavalos(coluna);
         return true;
     }
 
-    public boolean isDadosLancados() {
-        return dadosLancados;
-    }
-
-    public int getDado(int indice) {
-        return dados[indice];
-    }
-
+    /** Move o jogador da vez até o destino gastando um movimento por parada. */
     public boolean moverJogadorDaVez(String destino) {
         String cor = getJogadorDaVez();
-        if (!dadosLancados || cor == null) {
+        if (cor == null || colunaAtivada < 0) {
             return false;
         }
         List<String> percurso = tabuleiro.menorPercurso(paradaDe(cor), destino);
-        if (percurso == null || !moverJogador(cor, percurso, dados[0] + dados[1])) {
+        if (percurso == null || !moverJogador(cor, percurso, movimentosRestantes)) {
             return false;
         }
-        passarVez();
+        movimentosRestantes -= percurso.size();
+        return true;
+    }
+
+    /** Encerra o turno; só é possível depois de ativar uma coluna. */
+    public boolean encerrarTurno() {
+        Jogador jogador = jogadores.get(getJogadorDaVez());
+        if (jogador == null || colunaAtivada < 0) {
+            return false;
+        }
+        if (colunaAtivada == Herdeiro.COLUNA_BRANCA) {
+            jogador.recuperarPecasDeAtivacao();
+        }
+        colunaAtivada = -1;
+        movimentosRestantes = 0;
+        indiceDaVez = (indiceDaVez + 1) % ordemDosJogadores.size();
+        iniciarTurno(getJogadorDaVez());
         return true;
     }
 

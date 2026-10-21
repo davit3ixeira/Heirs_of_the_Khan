@@ -8,18 +8,43 @@ import java.util.Set;
 
 class Jogador {
     private final String cor;
+    private final Herdeiro herdeiro;
+    private final boolean[] colunasOcupadas = new boolean[Herdeiro.NUM_COLUNAS];
     private Parada paradaAtual;
     private final Map<TipoTributo, Integer> tributos = new HashMap<>();
     private final Set<String> paradasVisitadasNoTurno = new LinkedHashSet<>();
 
-    Jogador(String cor, Parada inicial) {
+    Jogador(String cor, Herdeiro herdeiro, Parada inicial) {
         this.cor = cor;
+        this.herdeiro = herdeiro;
         this.paradaAtual = inicial;
         inicial.entrar(this);
     }
 
     String getCor() {
         return cor;
+    }
+
+    Herdeiro getHerdeiro() {
+        return herdeiro;
+    }
+
+    boolean colunaOcupada(int coluna) {
+        return colunasOcupadas[coluna];
+    }
+
+    boolean ocuparColuna(int coluna) {
+        if (coluna < 0 || coluna >= Herdeiro.NUM_COLUNAS || colunasOcupadas[coluna]) {
+            return false;
+        }
+        colunasOcupadas[coluna] = true;
+        return true;
+    }
+
+    void recuperarPecasDeAtivacao() {
+        for (int i = 0; i < colunasOcupadas.length; i++) {
+            colunasOcupadas[i] = false;
+        }
     }
 
     Parada getParadaAtual() {

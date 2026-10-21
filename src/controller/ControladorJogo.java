@@ -1,25 +1,24 @@
 package controller;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import model.Jogo;
-import view.JanelaTabuleiro;
-import view.OuvinteTabuleiro;
+import view.JanelaJogo;
 
 public class ControladorJogo {
-    private final Jogo jogo;
-    private final JanelaTabuleiro janela;
+    Jogo jogo;
+    JanelaJogo janela;
 
-    public ControladorJogo(List<String> cores) {
-        jogo = Jogo.novaPartida(cores);
-        janela = new JanelaTabuleiro();
-        janela.adicionarOuvinteJogarDados(new TratadorJogarDados());
-        janela.adicionarOuvinteEscolherDados(new TratadorEscolherDados());
-        janela.adicionarOuvinteTabuleiro(new TratadorCliqueTabuleiro());
+    public ControladorJogo(String[] cores) {
+        jogo = new Jogo();
+        for (int i = 0; i < cores.length; i++)
+            jogo.adicionarJogador(cores[i]);
+        jogo.iniciarTurno(jogo.getJogadorDaVez());
+
+        janela = new JanelaJogo("Herdeiros do Khan");
+        janela.getPainelTabuleiro().addMouseListener(new TratadorCliqueTabuleiro(this));
+        janela.getPainelJogador().addMouseListener(new TratadorCliqueJogador(this));
+        janela.getBotaoEncerrar().addActionListener(new TratadorEncerrarTurno(this));
         atualizarJanela();
     }
 
@@ -27,39 +26,36 @@ public class ControladorJogo {
         janela.setVisible(true);
     }
 
-    private void atualizarJanela() {
-        Map<String, String> paradaPorCor = new LinkedHashMap<>();
-        for (String cor : jogo.getCores()) {
-            paradaPorCor.put(cor, jogo.paradaDe(cor));
-        }
-        janela.atualizar(paradaPorCor, jogo.getJogadorDaVez(),
-                jogo.getDado(0), jogo.getDado(1), jogo.isDadosLancados());
+    void paradaClicada(int x, int y) {
+        String parada = janela.getPainelTabuleiro().paradaEm(x, y);
+        if (parada != null && jogo.moverJogadorDaVez(parada))
+            atualizarJanela();
     }
 
-    private class TratadorJogarDados implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            if (jogo.lancarDados()) {
-                atualizarJanela();
-            }
-        }
+    void colunaClicada(int x, int y) {
+        int coluna = janela.getPainelJogador().colunaEm(x, y);
+        if (coluna >= 0 && jogo.ativarColuna(coluna))
+            atualizarJanela();
     }
 
-    private class TratadorEscolherDados implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            if (jogo.definirDados(janela.getDadoEscolhido1(), janela.getDadoEscolhido2())) {
-                atualizarJanela();
-            }
-        }
+    void encerrarTurno() {
+        if (jogo.encerrarTurno())
+            atualizarJanela();
     }
 
-    private class TratadorCliqueTabuleiro implements OuvinteTabuleiro {
-        @Override
-        public void paradaClicada(String paradaId) {
-            if (jogo.moverJogadorDaVez(paradaId)) {
-                atualizarJanela();
-            }
+    void atualizarJanela() {
+        List<String> lc = jogo.getCores();
+        String[] cores = new String[lc.size()];
+        String[] paradas = new String[lc.size()];
+        for (int i = 0; i < lc.size(); i++) {
+            cores[i] = lc.get(i);
+            paradas[i] = jogo.paradaDe(cores[i]);
         }
+        String vez = jogo.getJogadorDaVez();
+        boolean[] ocupadas = new boolean[4];
+        for (int i = 0; i < ocupadas.length; i++)
+            ocupadas[i] = jogo.colunaOcupada(vez, i);
+        janela.atualizar(cores, paradas, vez, jogo.getNumeroDoTabuleiro(vez), ocupadas,
+                jogo.getColunaAtivada() >= 0, jogo.getMovimentosRestantes());
     }
 }
