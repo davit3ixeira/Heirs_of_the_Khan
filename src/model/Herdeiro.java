@@ -1,9 +1,5 @@
 package model;
 
-/**
- * Tabuleiros de jogador. Cada um tem 4 colunas de ativação (vermelha, verde,
- * amarela e branca), com o número de cavalos impresso na ação inicial.
- */
 enum Herdeiro {
     ALTANI(1, 2, 1, 2),
     JOCHI(1, 1, 2, 2),

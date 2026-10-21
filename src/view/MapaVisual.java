@@ -5,10 +5,6 @@ import java.awt.Rectangle;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Posições das paradas sobre a imagem do tabuleiro, num sistema de referência
- * de LARGURA x ALTURA. Paradas duplas têm dois círculos.
- */
 class MapaVisual {
     static final double LARGURA = 1400;
     static final double ALTURA = 1406.6;
@@ -44,7 +40,6 @@ class MapaVisual {
         }
     }
 
-    /** Parada sob o ponto (x, y) de referência, ou null. */
     String paradaEm(double x, double y) {
         if (AREA_KARAKORUM.contains(x, y)) {
             return KARAKORUM;
@@ -59,7 +54,6 @@ class MapaVisual {
         return null;
     }
 
-    /** Centro onde desenhar o i-ésimo pião de uma parada. */
     Point posicaoDoPiao(String paradaId, int indice) {
         if (KARAKORUM.equals(paradaId)) {
             return new Point(632 + indice * 34, 700);

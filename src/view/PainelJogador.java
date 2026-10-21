@@ -4,13 +4,11 @@ import java.awt.*;
 import java.awt.geom.*;
 import javax.swing.*;
 
-/** Tabuleiro do jogador da vez, com as peças de ativação colocadas nas colunas. */
 public class PainelJogador extends JPanel {
     public static final int LARGURA = 420;
     public static final int ALTURA = 229;
     public static final int DIAM_PECA = 30;
 
-    // Colunas (vermelha, verde, amarela e branca) numa cartela de 1400 x 763
     static final double LARG_REF = 1400.0;
     static final double ALT_REF = 763.0;
     static final double[] COL_INICIO = {365, 612, 858, 1135};
