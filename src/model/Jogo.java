@@ -1,16 +1,34 @@
 package model;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 public class Jogo {
     private static final int MAX_JOGADORES = 5;
 
     private final Tabuleiro tabuleiro = new Tabuleiro();
-    private final Map<String, Jogador> jogadores = new HashMap<>();
+    private final Map<String, Jogador> jogadores = new LinkedHashMap<>();
+    private final List<String> ordemDosJogadores = new ArrayList<>();
+    private int indiceDaVez = 0;
+
+    private final Random random = new Random();
+    private final int[] dados = new int[2];
+    private boolean dadosLancados = false;
 
     public Jogo() {
+        this(true);
+    }
+
+    private Jogo(boolean redeDemonstrativa) {
+        if (!redeDemonstrativa) {
+            MapaPadrao.montar(tabuleiro);
+            return;
+        }
         tabuleiro.adicionarParada("P1", 1);
         tabuleiro.adicionarParada("P2", 2);
         tabuleiro.adicionarParada("P3", 1);
@@ -30,6 +48,68 @@ public class Jogo {
             throw new IllegalStateException("O jogo aceita no máximo cinco jogadores.");
         }
         jogadores.put(cor, new Jogador(cor, tabuleiro.getParada(Tabuleiro.KARAKORUM)));
+        ordemDosJogadores.add(cor);
+    }
+
+    public static Jogo novaPartida(List<String> cores) {
+        Jogo jogo = new Jogo(false);
+        for (String cor : cores) {
+            jogo.adicionarJogador(cor);
+        }
+        jogo.iniciarTurno(jogo.getJogadorDaVez());
+        return jogo;
+    }
+
+    public List<String> getCores() {
+        return Collections.unmodifiableList(ordemDosJogadores);
+    }
+
+    public String getJogadorDaVez() {
+        return ordemDosJogadores.isEmpty() ? null : ordemDosJogadores.get(indiceDaVez);
+    }
+
+    public void passarVez() {
+        if (ordemDosJogadores.isEmpty()) {
+            return;
+        }
+        indiceDaVez = (indiceDaVez + 1) % ordemDosJogadores.size();
+        dadosLancados = false;
+        iniciarTurno(getJogadorDaVez());
+    }
+
+    public boolean lancarDados() {
+        return definirDados(random.nextInt(6) + 1, random.nextInt(6) + 1);
+    }
+
+    public boolean definirDados(int dado1, int dado2) {
+        if (dadosLancados || dado1 < 1 || dado1 > 6 || dado2 < 1 || dado2 > 6) {
+            return false;
+        }
+        dados[0] = dado1;
+        dados[1] = dado2;
+        dadosLancados = true;
+        return true;
+    }
+
+    public boolean isDadosLancados() {
+        return dadosLancados;
+    }
+
+    public int getDado(int indice) {
+        return dados[indice];
+    }
+
+    public boolean moverJogadorDaVez(String destino) {
+        String cor = getJogadorDaVez();
+        if (!dadosLancados || cor == null) {
+            return false;
+        }
+        List<String> percurso = tabuleiro.menorPercurso(paradaDe(cor), destino);
+        if (percurso == null || !moverJogador(cor, percurso, dados[0] + dados[1])) {
+            return false;
+        }
+        passarVez();
+        return true;
     }
 
     public boolean adicionarParada(String id, int capacidade) {

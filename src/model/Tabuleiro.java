@@ -1,6 +1,9 @@
 package model;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,6 +65,37 @@ class Tabuleiro {
     boolean paradaTemProvinciaAdjacente(String paradaId, String provinciaId) {
         Parada parada = paradas.get(paradaId);
         return parada != null && parada.temProvinciaAdjacente(provinciaId);
+    }
+
+    List<String> menorPercurso(String origemId, String destinoId) {
+        Parada origem = paradas.get(origemId);
+        Parada destino = paradas.get(destinoId);
+        if (origem == null || destino == null) {
+            return null;
+        }
+
+        Map<Parada, Parada> anterior = new HashMap<>();
+        Deque<Parada> fila = new ArrayDeque<>();
+        anterior.put(origem, origem);
+        fila.add(origem);
+        while (!fila.isEmpty() && !anterior.containsKey(destino)) {
+            Parada atual = fila.poll();
+            for (Parada vizinha : atual.getVizinhas()) {
+                if (!anterior.containsKey(vizinha)) {
+                    anterior.put(vizinha, atual);
+                    fila.add(vizinha);
+                }
+            }
+        }
+        if (!anterior.containsKey(destino)) {
+            return null;
+        }
+
+        LinkedList<String> percurso = new LinkedList<>();
+        for (Parada p = destino; p != origem; p = anterior.get(p)) {
+            percurso.addFirst(p.getId());
+        }
+        return percurso;
     }
 
     boolean moverJogador(Jogador jogador, List<String> idsPercorridos, int limiteMovimentos) {

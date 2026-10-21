@@ -1,5 +1,7 @@
 package model;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +30,10 @@ class Parada {
 
     void adicionarProvinciaAdjacente(Provincia provincia) {
         provinciasAdjacentes.put(provincia.getId(), provincia);
+    }
+
+    Collection<Parada> getVizinhas() {
+        return Collections.unmodifiableCollection(vizinhas.values());
     }
 
     boolean eVizinha(Parada outra) {
