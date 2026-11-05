@@ -4,7 +4,11 @@ import java.awt.*;
 import java.awt.geom.*;
 import javax.swing.*;
 
-public class PainelJogador extends JPanel {
+import model.Fachada;
+import model.Observado;
+import model.Observador;
+
+public class PainelJogador extends JPanel implements Observador {
     public static final int LARGURA = 420;
     public static final int ALTURA = 229;
     public static final int DIAM_PECA = 30;
@@ -16,11 +20,18 @@ public class PainelJogador extends JPanel {
     static final double TOPO = 70;
     static final double BASE = 690;
 
+    Image[] cartelas;
     Image img;
     String cor = "";
     boolean[] ocupadas = new boolean[4];
 
-    public PainelJogador() {
+    public PainelJogador(Image[] cartelas) {
+        this.cartelas = cartelas;
+    }
+
+    public void notificar(Observado o) {
+        int numero = (Integer) o.get(Fachada.TABULEIRO);
+        setJogador(cartelas[numero - 1], (String) o.get(Fachada.VEZ), (boolean[]) o.get(Fachada.OCUPADAS));
     }
 
     public void setJogador(Image i, String c, boolean[] o) {

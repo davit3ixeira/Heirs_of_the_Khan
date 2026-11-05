@@ -28,9 +28,22 @@ class MapaVisual {
         {"PERSIA_N", 225, 405, 220, 457}, {"PERSIA_S", 322, 908, 378, 908},
     };
 
+    private static final Object[][] PROVINCIAS = {
+        {"PROV_01", 310, 200}, {"PROV_02", 410, 170}, {"PROV_03", 385, 455},
+        {"PROV_04", 605, 445}, {"PROV_05", 255, 585}, {"PROV_06", 945, 365},
+        {"PROV_07", 1040, 505}, {"PROV_08", 290, 800}, {"PROV_09", 730, 780},
+        {"PROV_10", 1150, 750}, {"PROV_11", 1000, 885}, {"PROV_12", 810, 925},
+    };
+
+    private static final int RAIO_PROVINCIA = 28;
+
     private final Map<String, Point[]> circulos = new HashMap<>();
+    private final Map<String, Point> provincias = new HashMap<>();
 
     MapaVisual() {
+        for (Object[] def : PROVINCIAS) {
+            provincias.put((String) def[0], new Point((Integer) def[1], (Integer) def[2]));
+        }
         for (Object[] def : CIRCULOS) {
             Point[] pontos = new Point[(def.length - 1) / 2];
             for (int i = 0; i < pontos.length; i++) {
@@ -52,6 +65,19 @@ class MapaVisual {
             }
         }
         return null;
+    }
+
+    String provinciaEm(double x, double y) {
+        for (Map.Entry<String, Point> entrada : provincias.entrySet()) {
+            if (entrada.getValue().distance(x, y) <= RAIO_PROVINCIA) {
+                return entrada.getKey();
+            }
+        }
+        return null;
+    }
+
+    Point posicaoDaProvincia(String provinciaId) {
+        return provincias.get(provinciaId);
     }
 
     Point posicaoDoPiao(String paradaId, int indice) {

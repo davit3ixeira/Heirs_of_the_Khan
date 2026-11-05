@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Jogo {
+class Jogo {
     private static final int MAX_JOGADORES = 5;
 
     private final Tabuleiro tabuleiro = new Tabuleiro();
@@ -16,12 +16,20 @@ public class Jogo {
     private int indiceDaVez = 0;
     private int colunaAtivada = -1;
     private int movimentosRestantes = 0;
+    private int coletasRestantes = 0;
+    private final List<String> cartasAbertas = new ArrayList<>();
+    private final Map<String, List<String>> cartasSecretasOferecidas = new HashMap<>();
+    private final Map<String, String> cartasSecretas = new HashMap<>();
 
     public Jogo() {
         MapaPadrao.montar(tabuleiro);
     }
 
     public void adicionarJogador(String cor) {
+        adicionarJogador(cor, jogadores.size() + 1);
+    }
+
+    public void adicionarJogador(String cor, int numeroDoTabuleiro) {
         if (cor == null || cor.isBlank()) {
             throw new IllegalArgumentException("A cor do jogador não pode ser vazia.");
         }
@@ -31,9 +39,69 @@ public class Jogo {
         if (jogadores.size() >= MAX_JOGADORES) {
             throw new IllegalStateException("O jogo aceita no máximo cinco jogadores.");
         }
-        Herdeiro herdeiro = Herdeiro.values()[jogadores.size()];
+        if (numeroDoTabuleiro < 1 || numeroDoTabuleiro > MAX_JOGADORES) {
+            throw new IllegalArgumentException("Número de tabuleiro inválido.");
+        }
+        Herdeiro herdeiro = Herdeiro.values()[numeroDoTabuleiro - 1];
+        for (Jogador existente : jogadores.values()) {
+            if (existente.getHerdeiro() == herdeiro) {
+                throw new IllegalArgumentException("Já existe um jogador com esse tabuleiro.");
+            }
+        }
         jogadores.put(cor, new Jogador(cor, herdeiro, tabuleiro.getParada(Tabuleiro.KARAKORUM)));
         ordemDosJogadores.add(cor);
+    }
+
+    public void distribuirCartas() {
+        List<String> abertas = new ArrayList<>();
+        for (int i = 1; i <= 9; i++)
+            abertas.add("1-" + i);
+        abertas.addAll(List.of("2-1", "2-2", "2-3", "3-1", "3-2"));
+        Collections.shuffle(abertas);
+        cartasAbertas.clear();
+        cartasAbertas.addAll(abertas.subList(0, 4));
+
+        List<String> secretas = new ArrayList<>();
+        for (int grupo = 4; grupo <= 8; grupo++) {
+            secretas.add(grupo + "-1");
+            secretas.add(grupo + "-2");
+        }
+        Collections.shuffle(secretas);
+        cartasSecretas.clear();
+        cartasSecretasOferecidas.clear();
+        for (int i = 0; i < ordemDosJogadores.size(); i++)
+            cartasSecretasOferecidas.put(ordemDosJogadores.get(i),
+                    new ArrayList<>(secretas.subList(2 * i, 2 * i + 2)));
+    }
+
+    public String getJogadorEscolhendo() {
+        for (String cor : ordemDosJogadores) {
+            if (cartasSecretasOferecidas.containsKey(cor))
+                return cor;
+        }
+        return null;
+    }
+
+    public List<String> getCartasSecretasOferecidas(String cor) {
+        List<String> oferecidas = cartasSecretasOferecidas.get(cor);
+        return oferecidas == null ? List.of() : Collections.unmodifiableList(oferecidas);
+    }
+
+    public boolean escolherCartaSecreta(String cor, String id) {
+        List<String> oferecidas = cartasSecretasOferecidas.get(cor);
+        if (oferecidas == null || !oferecidas.contains(id))
+            return false;
+        cartasSecretas.put(cor, id);
+        cartasSecretasOferecidas.remove(cor);
+        return true;
+    }
+
+    public List<String> getCartasAbertas() {
+        return Collections.unmodifiableList(cartasAbertas);
+    }
+
+    public String getCartaSecreta(String cor) {
+        return cartasSecretas.get(cor);
     }
 
     public List<String> getCores() {
@@ -64,6 +132,33 @@ public class Jogo {
         return movimentosRestantes;
     }
 
+    public int getColetasRestantes() {
+        return coletasRestantes;
+    }
+
+    public Map<String, Integer> totaisPorProvincia() {
+        return tabuleiro.totaisPorProvincia();
+    }
+
+    public boolean coletarTributoDaProvincia(String provinciaId) {
+        Provincia provincia = tabuleiro.getProvincia(provinciaId);
+        String cor = getJogadorDaVez();
+        if (cor == null || provincia == null || colunaAtivada < 0 || coletasRestantes < 1) {
+            return false;
+        }
+        for (TipoTributo tipo : TipoTributo.values()) {
+            if (provincia.quantidade(tipo) > 0) {
+                boolean coletou = coletarTributos(cor, coletasRestantes,
+                        List.of(new EscolhaTributo(provinciaId, tipo.name())));
+                if (coletou) {
+                    coletasRestantes--;
+                }
+                return coletou;
+            }
+        }
+        return false;
+    }
+
     /** Coloca uma peça de ativação do jogador da vez numa coluna livre. */
     public boolean ativarColuna(int coluna) {
         Jogador jogador = jogadores.get(getJogadorDaVez());
@@ -72,6 +167,7 @@ public class Jogo {
         }
         colunaAtivada = coluna;
         movimentosRestantes = jogador.getHerdeiro().cavalos(coluna);
+        coletasRestantes = jogador.getHerdeiro().cavalos(coluna);
         return true;
     }
 
@@ -100,6 +196,7 @@ public class Jogo {
         }
         colunaAtivada = -1;
         movimentosRestantes = 0;
+        coletasRestantes = 0;
         indiceDaVez = (indiceDaVez + 1) % ordemDosJogadores.size();
         iniciarTurno(getJogadorDaVez());
         return true;

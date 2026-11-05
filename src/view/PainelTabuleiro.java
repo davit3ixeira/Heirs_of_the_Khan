@@ -2,9 +2,15 @@ package view;
 
 import java.awt.*;
 import java.awt.geom.*;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.*;
 
-public class PainelTabuleiro extends JPanel {
+import model.Fachada;
+import model.Observado;
+import model.Observador;
+
+public class PainelTabuleiro extends JPanel implements Observador {
     public static final int LARGURA = 936;
     public static final int ALTURA = 940;
     public static final int DIAM_PEAO = 22;
@@ -13,9 +19,16 @@ public class PainelTabuleiro extends JPanel {
     MapaVisual mapa = new MapaVisual();
     String[] cores = new String[0];
     String[] paradas = new String[0];
+    Map<String, Integer> tributos = new HashMap<>();
 
     public PainelTabuleiro(Image i) {
         img = i;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void notificar(Observado o) {
+        tributos = (Map<String, Integer>) o.get(Fachada.TRIBUTOS_PROVINCIAS);
+        setPeoes((String[]) o.get(Fachada.CORES), (String[]) o.get(Fachada.PARADAS));
     }
 
     public void setPeoes(String[] c, String[] p) {
@@ -28,10 +41,27 @@ public class PainelTabuleiro extends JPanel {
         return mapa.paradaEm(x * MapaVisual.LARGURA / LARGURA, y * MapaVisual.ALTURA / ALTURA);
     }
 
+    public String provinciaEm(int x, int y) {
+        return mapa.provinciaEm(x * MapaVisual.LARGURA / LARGURA, y * MapaVisual.ALTURA / ALTURA);
+    }
+
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
         g2d.drawImage(img, 0, 0, LARGURA, ALTURA, null);
+
+        for (Map.Entry<String, Integer> t : tributos.entrySet()) {
+            Point p = mapa.posicaoDaProvincia(t.getKey());
+            double cX = p.x * LARGURA / MapaVisual.LARGURA + 16;
+            double cY = p.y * ALTURA / MapaVisual.ALTURA + 16;
+            Ellipse2D marca = new Ellipse2D.Double();
+            marca.setFrameFromCenter(cX, cY, cX + 9, cY + 9);
+            g2d.setPaint(Color.WHITE);
+            g2d.fill(marca);
+            g2d.setPaint(Color.BLACK);
+            g2d.draw(marca);
+            g2d.drawString(String.valueOf(t.getValue()), (int) cX - 3, (int) cY + 4);
+        }
 
         for (int i = 0; i < cores.length; i++) {
             int indice = 0;

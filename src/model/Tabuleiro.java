@@ -54,6 +54,14 @@ class Tabuleiro {
         return true;
     }
 
+    Map<String, Integer> totaisPorProvincia() {
+        Map<String, Integer> totais = new HashMap<>();
+        for (Provincia provincia : provincias.values()) {
+            totais.put(provincia.getId(), provincia.total());
+        }
+        return totais;
+    }
+
     Parada getParada(String id) {
         return paradas.get(id);
     }

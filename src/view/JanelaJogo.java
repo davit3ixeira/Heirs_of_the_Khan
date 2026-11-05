@@ -5,17 +5,25 @@ import java.io.*;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-public class JanelaJogo extends JFrame {
+import model.Fachada;
+import model.Observado;
+import model.Observador;
+
+public class JanelaJogo extends JFrame implements Observador {
     public final int LARG_DEFAULT = 1400;
     public final int ALT_DEFAULT = 1000;
     public static final int NUM_CARTELAS = 5;
 
     Image[] cartelas = new Image[NUM_CARTELAS];
     PainelTabuleiro pt;
-    PainelJogador pj = new PainelJogador();
+    PainelJogador pj;
     JLabel lVez = new JLabel();
     JLabel lMovimentos = new JLabel();
+    JLabel lColetas = new JLabel();
+    JLabel lTributos = new JLabel();
     JButton bEncerrar = new JButton("Encerrar Turno");
+    JButton bCartela = new JButton("Cartela");
+    JButton bCartas = new JButton("Cartas");
 
     public JanelaJogo(String s) {
         super(s);
@@ -32,6 +40,7 @@ public class JanelaJogo extends JFrame {
         pt = new PainelTabuleiro(carregar("assets/tabuleiro.jpg"));
         for (int i = 0; i < NUM_CARTELAS; i++)
             cartelas[i] = carregar("assets/cartelas/cartela" + (i + 1) + ".jpg");
+        pj = new PainelJogador(cartelas);
 
         Container c = getContentPane();
         c.setLayout(null);
@@ -39,15 +48,23 @@ public class JanelaJogo extends JFrame {
         lVez.setBounds(950, 20, 420, 30);
         pj.setBounds(950, 60, PainelJogador.LARGURA, PainelJogador.ALTURA);
         lMovimentos.setBounds(950, 300, 420, 30);
-        bEncerrar.setBounds(950, 340, 160, 30);
+        lColetas.setBounds(950, 330, 420, 30);
+        lTributos.setBounds(950, 360, 420, 30);
+        bEncerrar.setBounds(950, 410, 160, 30);
+        bCartela.setBounds(950, 450, 160, 30);
+        bCartas.setBounds(950, 490, 160, 30);
         c.add(pt);
         c.add(lVez);
         c.add(pj);
         c.add(lMovimentos);
+        c.add(lColetas);
+        c.add(lTributos);
         c.add(bEncerrar);
+        c.add(bCartela);
+        c.add(bCartas);
     }
 
-    Image carregar(String arquivo) {
+    static Image carregar(String arquivo) {
         Image i = null;
         try {
             i = ImageIO.read(new File(arquivo));
@@ -71,10 +88,18 @@ public class JanelaJogo extends JFrame {
         return bEncerrar;
     }
 
-    public void atualizar(String[] cores, String[] paradas, String corDaVez, int numTabuleiro,
-            boolean[] ocupadas, boolean colunaAtivada, int movimentos) {
-        pt.setPeoes(cores, paradas);
-        pj.setJogador(cartelas[numTabuleiro - 1], corDaVez, ocupadas);
+    public JButton getBotaoCartela() {
+        return bCartela;
+    }
+
+    public JButton getBotaoCartas() {
+        return bCartas;
+    }
+
+    public void notificar(Observado o) {
+        String corDaVez = (String) o.get(Fachada.VEZ);
+        boolean colunaAtivada = (Boolean) o.get(Fachada.COLUNA_ATIVADA);
+        int movimentos = (Integer) o.get(Fachada.MOVIMENTOS);
         lVez.setText("Jogador da vez: " + corDaVez);
         lVez.setForeground(Cores.converter(corDaVez));
         if (colunaAtivada)
@@ -82,5 +107,13 @@ public class JanelaJogo extends JFrame {
         else
             lMovimentos.setText("Escolha uma coluna do seu tabuleiro");
         bEncerrar.setEnabled(colunaAtivada);
+        if (colunaAtivada)
+            lColetas.setText("Coletas de tributo restantes: " + o.get(Fachada.COLETAS));
+        else
+            lColetas.setText("");
+        int[] tributos = (int[]) o.get(Fachada.TRIBUTOS_JOGADOR);
+        lTributos.setText("Tributos - espadas: " + tributos[0] + "  yurts: " + tributos[1]
+                + "  moedas: " + tributos[2]);
+        pj.setVisible((Boolean) o.get(Fachada.CARTELA_VISIVEL));
     }
 }

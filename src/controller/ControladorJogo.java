@@ -1,61 +1,91 @@
 package controller;
 
-import java.util.List;
-
-import model.Jogo;
+import model.Fachada;
+import view.JanelaCartas;
+import view.JanelaEscolha;
+import view.JanelaInicial;
 import view.JanelaJogo;
 
 public class ControladorJogo {
-    Jogo jogo;
+    Fachada fachada = Fachada.getInstance();
+    JanelaInicial janelaInicial;
+    JanelaEscolha janelaEscolha;
     JanelaJogo janela;
+    JanelaCartas janelaCartas;
 
-    public ControladorJogo(String[] cores) {
-        jogo = new Jogo();
-        for (int i = 0; i < cores.length; i++)
-            jogo.adicionarJogador(cores[i]);
-        jogo.iniciarTurno(jogo.getJogadorDaVez());
-
-        janela = new JanelaJogo("Herdeiros do Khan");
-        janela.getPainelTabuleiro().addMouseListener(new TratadorCliqueTabuleiro(this));
-        janela.getPainelJogador().addMouseListener(new TratadorCliqueJogador(this));
-        janela.getBotaoEncerrar().addActionListener(new TratadorEncerrarTurno(this));
-        atualizarJanela();
+    public ControladorJogo() {
+        janelaInicial = new JanelaInicial();
+        janelaInicial.getBotaoNova().addActionListener(new TratadorNovaPartida(this));
     }
 
     public void iniciar() {
+        janelaInicial.setVisible(true);
+    }
+
+    void novaPartida() {
+        janelaInicial.dispose();
+        janelaEscolha = new JanelaEscolha();
+        janelaEscolha.getBotaoIniciar().addActionListener(new TratadorIniciarPartida(this));
+        janelaEscolha.setVisible(true);
+    }
+
+    void iniciarPartida() {
+        String[] cores = janelaEscolha.getCoresEscolhidas();
+        if (cores.length < 2)
+            return;
+        int[] tabuleiros = janelaEscolha.getTabuleirosEscolhidos();
+        janelaEscolha.dispose();
+
+        janela = new JanelaJogo("Herdeiros do Khan");
+        janelaCartas = new JanelaCartas();
+        janela.getPainelTabuleiro().addMouseListener(new TratadorCliqueTabuleiro(this));
+        janela.getPainelJogador().addMouseListener(new TratadorCliqueJogador(this));
+        janela.getBotaoEncerrar().addActionListener(new TratadorEncerrarTurno(this));
+        janela.getBotaoCartela().addActionListener(new TratadorAlternarCartela(this));
+        janela.getBotaoCartas().addActionListener(new TratadorAlternarCartas(this));
+        janelaCartas.addWindowListener(new TratadorFecharCartas(this));
+        janelaCartas.getPainelCartas().addMouseListener(new TratadorCliqueCartas(this));
+
+        fachada.adicionarObservador(janela);
+        fachada.adicionarObservador(janela.getPainelTabuleiro());
+        fachada.adicionarObservador(janela.getPainelJogador());
+        fachada.adicionarObservador(janelaCartas);
         janela.setVisible(true);
+        fachada.iniciarPartida(cores, tabuleiros);
     }
 
     void paradaClicada(int x, int y) {
         String parada = janela.getPainelTabuleiro().paradaEm(x, y);
-        if (parada != null && jogo.moverJogadorDaVez(parada))
-            atualizarJanela();
+        if (parada != null) {
+            fachada.moverJogadorDaVez(parada);
+            return;
+        }
+        String provincia = janela.getPainelTabuleiro().provinciaEm(x, y);
+        if (provincia != null)
+            fachada.coletarTributo(provincia);
     }
 
     void colunaClicada(int x, int y) {
         int coluna = janela.getPainelJogador().colunaEm(x, y);
-        if (coluna >= 0 && jogo.ativarColuna(coluna))
-            atualizarJanela();
+        if (coluna >= 0)
+            fachada.ativarColuna(coluna);
+    }
+
+    void cartaClicada(int x, int y) {
+        String carta = janelaCartas.getPainelCartas().cartaEm(x, y);
+        if (carta != null)
+            fachada.escolherCartaSecreta(carta);
     }
 
     void encerrarTurno() {
-        if (jogo.encerrarTurno())
-            atualizarJanela();
+        fachada.encerrarTurno();
     }
 
-    void atualizarJanela() {
-        List<String> lc = jogo.getCores();
-        String[] cores = new String[lc.size()];
-        String[] paradas = new String[lc.size()];
-        for (int i = 0; i < lc.size(); i++) {
-            cores[i] = lc.get(i);
-            paradas[i] = jogo.paradaDe(cores[i]);
-        }
-        String vez = jogo.getJogadorDaVez();
-        boolean[] ocupadas = new boolean[4];
-        for (int i = 0; i < ocupadas.length; i++)
-            ocupadas[i] = jogo.colunaOcupada(vez, i);
-        janela.atualizar(cores, paradas, vez, jogo.getNumeroDoTabuleiro(vez), ocupadas,
-                jogo.getColunaAtivada() >= 0, jogo.getMovimentosRestantes());
+    void alternarCartela() {
+        fachada.alternarCartela();
+    }
+
+    void alternarCartas() {
+        fachada.alternarCartas();
     }
 }

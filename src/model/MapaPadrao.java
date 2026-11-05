@@ -43,6 +43,25 @@ class MapaPadrao {
         {"SAMARCANDA_L", Tabuleiro.KARAKORUM},
     };
 
+    private static final String[][] PROVINCIAS = {
+        {"PROV_01", "YURT", "KIEV_L", "KIEV_N", "MOSCOU_O", "PERSIA_N"},
+        {"PROV_02", "ESPADA", "KIEV_N", "MOSCOU_L", "MOSCOU_O", "RUSSIA_O"},
+        {"PROV_03", "MOEDA", "MOSCOU_O", "MOSCOU_S", "PERSIA_N", "SAMARCANDA_N"},
+        {"PROV_04", "YURT", Tabuleiro.KARAKORUM, "MOSCOU_L", "MOSCOU_S", "SAMARCANDA_L",
+            "SAMARCANDA_N", "SARAI_O"},
+        {"PROV_05", "ESPADA", "BAGDA_N", "PERSIA_N", "SAMARCANDA_N", "SAMARCANDA_O"},
+        {"PROV_06", "MOEDA", Tabuleiro.KARAKORUM, "RUSSIA_L", "SARAI_L", "SARAI_O"},
+        {"PROV_07", "ESPADA", "KAESONG_O", "KAESONG_S", Tabuleiro.KARAKORUM, "PEQUIM_N",
+            "RUSSIA_L"},
+        {"PROV_08", "MOEDA", "BAGDA_L", "BAGDA_N", "CABUL_N", "PERSIA_S", "SAMARCANDA_L",
+            "SAMARCANDA_O"},
+        {"PROV_09", "YURT", "CABUL_N", Tabuleiro.KARAKORUM, "PEQUIM_N", "PEQUIM_O",
+            "SAMARCANDA_L"},
+        {"PROV_10", "MOEDA", "CANTAO_N", "CHINA_L", "KAESONG_S", "PEQUIM_L", "PEQUIM_N"},
+        {"PROV_11", "YURT", "CANTAO_N", "CANTAO_O", "CHINA_S", "PEQUIM_L", "PEQUIM_O"},
+        {"PROV_12", "ESPADA", "CABUL_L", "CABUL_N", "CHINA_S", "PEQUIM_O"},
+    };
+
     private MapaPadrao() {
     }
 
@@ -52,6 +71,13 @@ class MapaPadrao {
         }
         for (String[] ligacao : LIGACOES) {
             tabuleiro.ligarParadas(ligacao[0], ligacao[1]);
+        }
+        for (String[] provincia : PROVINCIAS) {
+            tabuleiro.adicionarProvincia(provincia[0]);
+            tabuleiro.getProvincia(provincia[0]).adicionarTributo(TipoTributo.interpretar(provincia[1]));
+            for (int i = 2; i < provincia.length; i++) {
+                tabuleiro.associarProvincia(provincia[i], provincia[0]);
+            }
         }
     }
 }
