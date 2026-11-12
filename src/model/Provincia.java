@@ -8,6 +8,7 @@ class Provincia {
 
     private final String id;
     private final Map<TipoTributo, Integer> pecas = new HashMap<>();
+    private TipoTributo simbolo;
 
     Provincia(String id) {
         this.id = id;
@@ -40,7 +41,7 @@ class Provincia {
         if (tipo == null || quantidade <= 0 || total() + quantidade > MAX_PECAS) {
             return false;
         }
-        pecas.merge(tipo, quantidade, Integer::sum);
+        pecas.put(tipo, quantidade(tipo) + quantidade);
         return true;
     }
 
@@ -55,5 +56,13 @@ class Provincia {
             pecas.put(tipo, atual - 1);
         }
         return true;
+    }
+
+    TipoTributo getSimbolo() {
+        return simbolo;
+    }
+
+    void setSimbolo(TipoTributo simbolo) {
+        this.simbolo = simbolo;
     }
 }

@@ -20,6 +20,29 @@ public class Fachada implements Observado {
     public static final int TRIBUTOS_PROVINCIAS = 13;
     public static final int TRIBUTOS_JOGADOR = 14;
     public static final int COLETAS = 15;
+    public static final int PROVINCIAS_DETALHE = 16;
+    public static final int YURTS = 17;
+    public static final int CIDADES = 18;
+    public static final int KHAN = 19;
+    public static final int KHAN_PENDENTE = 20;
+    public static final int FAIXA = 21;
+    public static final int MELHORIAS_JOGADOR = 22;
+    public static final int BONUS_CONSELHEIROS = 23;
+    public static final int TESOUROS_JOGADOR = 24;
+    public static final int BONUS_JOGADOR = 25;
+    public static final int RECURSOS = 26;
+    public static final int TESOUROS_VIRTUAIS = 27;
+    public static final int ESCOLHA = 28;
+    public static final int OPCOES_TESOURO = 29;
+    public static final int VOTOS = 30;
+    public static final int CONSELHO = 31;
+    public static final int FIM = 32;
+    public static final int PLACAR = 33;
+    public static final int MENSAGEM = 34;
+    public static final int PILHA_MELHORIAS = 35;
+
+    public static final String ESCOLHA_TESOURO_BONUS = "TESOURO_BONUS";
+    public static final String ESCOLHA_MELHORIA_GRATIS = "MELHORIA_GRATIS";
 
     private static final String[] TIPOS = {"ESPADA", "YURT", "MOEDA"};
 
@@ -95,6 +118,51 @@ public class Fachada implements Observado {
             return tributos;
         case COLETAS:
             return jogo.getColetasRestantes();
+        case PROVINCIAS_DETALHE:
+            return jogo.detalheDasProvincias();
+        case YURTS:
+            return jogo.yurtsPorParada();
+        case CIDADES:
+            return jogo.descreverCidades();
+        case KHAN:
+            return jogo.getKhanLocal();
+        case KHAN_PENDENTE:
+            return jogo.isKhanPendente();
+        case FAIXA:
+            return jogo.faixaDeMelhorias();
+        case MELHORIAS_JOGADOR:
+            return jogo.melhoriasDoJogador(vez);
+        case BONUS_CONSELHEIROS:
+            return jogo.bonusDosConselheiros();
+        case TESOUROS_JOGADOR:
+            return jogo.tesourosDoJogador(vez);
+        case BONUS_JOGADOR:
+            return jogo.bonusDoJogador(vez).toArray(new String[0]);
+        case RECURSOS:
+            int[] virtuais = jogo.getRecursosVirtuais();
+            return new int[] {jogo.getMovimentosRestantes(), jogo.getColetasRestantes(),
+                virtuais[0], virtuais[1], virtuais[2], jogo.getYurtsRestantes(vez)};
+        case TESOUROS_VIRTUAIS:
+            return jogo.getTesourosVirtuais().toArray(new String[0]);
+        case ESCOLHA:
+            if (jogo.isMelhoriaGratisPendente()) {
+                return ESCOLHA_MELHORIA_GRATIS;
+            }
+            return jogo.getOpcoesTesouroBonus().isEmpty() ? null : ESCOLHA_TESOURO_BONUS;
+        case OPCOES_TESOURO:
+            return jogo.getOpcoesTesouroBonus().toArray(new String[0]);
+        case VOTOS:
+            return jogo.votosDosJogadores();
+        case CONSELHO:
+            return jogo.getConselho();
+        case FIM:
+            return jogo.isFimDeJogo();
+        case PLACAR:
+            return jogo.getPlacar().toArray(new String[0]);
+        case MENSAGEM:
+            return jogo.getUltimaMensagem();
+        case PILHA_MELHORIAS:
+            return jogo.getMelhoriasNaPilha();
         default:
             return null;
         }
@@ -106,6 +174,7 @@ public class Fachada implements Observado {
             jogo.adicionarJogador(cores[i], tabuleiros[i]);
         }
         jogo.distribuirCartas();
+        jogo.prepararPartida();
         jogo.iniciarTurno(jogo.getJogadorDaVez());
         cartasVisiveis = true;
         notificarObservadores();
@@ -139,12 +208,40 @@ public class Fachada implements Observado {
         return ok;
     }
 
-    public boolean coletarTributo(String provinciaId) {
-        boolean ok = !escolhendo() && jogo.coletarTributoDaProvincia(provinciaId);
-        if (ok) {
-            notificarObservadores();
-        }
-        return ok;
+    public boolean coletarTributo(String provinciaId, String tipo) {
+        return notificarSe(!escolhendo() && jogo.coletarTributoDaProvincia(provinciaId, tipo));
+    }
+
+    public boolean atacarCidade(String cidadeId, int indiceDoTesouro) {
+        return notificarSe(!escolhendo() && jogo.atacarCidade(cidadeId, indiceDoTesouro));
+    }
+
+    public boolean construirYurt(String paradaId) {
+        return notificarSe(!escolhendo() && jogo.construirYurt(paradaId));
+    }
+
+    public boolean comprarMelhoria(int indice) {
+        return notificarSe(!escolhendo() && jogo.comprarMelhoria(indice));
+    }
+
+    public boolean escolherMelhoriaGratis(int indice) {
+        return notificarSe(!escolhendo() && jogo.escolherMelhoriaGratis(indice));
+    }
+
+    public boolean entregarTesouros(String conselheiroId) {
+        return notificarSe(!escolhendo() && jogo.entregarTesouros(conselheiroId));
+    }
+
+    public boolean colocarKhan(String local) {
+        return notificarSe(!escolhendo() && jogo.colocarKhan(local));
+    }
+
+    public boolean usarBonus(int indice) {
+        return notificarSe(!escolhendo() && jogo.usarBonus(indice));
+    }
+
+    public boolean escolherTesouroBonus(int indice) {
+        return notificarSe(!escolhendo() && jogo.escolherTesouroBonus(indice));
     }
 
     public boolean encerrarTurno() {
@@ -166,6 +263,13 @@ public class Fachada implements Observado {
         }
         cartasVisiveis = !cartasVisiveis;
         notificarObservadores();
+    }
+
+    private boolean notificarSe(boolean ok) {
+        if (ok) {
+            notificarObservadores();
+        }
+        return ok;
     }
 
     private boolean escolhendo() {

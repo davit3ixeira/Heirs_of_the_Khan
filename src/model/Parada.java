@@ -1,8 +1,10 @@
 package model;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class Parada {
@@ -13,6 +15,7 @@ class Parada {
     private final Map<String, Parada> vizinhas = new HashMap<>();
     private final Map<String, Provincia> provinciasAdjacentes = new HashMap<>();
     private final Map<String, Jogador> ocupantes = new HashMap<>();
+    private final List<String> yurts = new ArrayList<>();
 
     Parada(String id, int capacidade) {
         this.id = id;
@@ -54,5 +57,43 @@ class Parada {
 
     void sair(Jogador jogador) {
         ocupantes.remove(jogador.getCor());
+    }
+
+    int getCapacidade() {
+        return capacidade;
+    }
+
+    boolean eDupla() {
+        return capacidade == 2;
+    }
+
+    boolean podeReceberYurt() {
+        return !Tabuleiro.KARAKORUM.equals(id) && yurts.size() < capacidade;
+    }
+
+    void adicionarYurt(String cor) {
+        yurts.add(cor);
+    }
+
+    boolean temYurtDe(String cor) {
+        return yurts.contains(cor);
+    }
+
+    int yurtsDe(String cor) {
+        int total = 0;
+        for (String dono : yurts) {
+            if (dono.equals(cor)) {
+                total++;
+            }
+        }
+        return total;
+    }
+
+    List<String> getYurts() {
+        return new ArrayList<>(yurts);
+    }
+
+    int getOcupantes() {
+        return ocupantes.size();
     }
 }

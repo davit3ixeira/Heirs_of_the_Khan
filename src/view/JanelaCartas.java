@@ -1,5 +1,6 @@
 package view;
 
+import java.awt.Dimension;
 import javax.swing.*;
 
 import model.Fachada;
@@ -11,10 +12,12 @@ public class JanelaCartas extends JFrame implements Observador {
 
     public JanelaCartas() {
         super("Cartas");
-        setBounds(100, 100, PainelCartas.LARGURA, PainelCartas.ALTURA);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         setResizable(false);
+        pc.setPreferredSize(new Dimension(Escala.px(PainelCartas.LARGURA), Escala.px(PainelCartas.ALTURA)));
         getContentPane().add(pc);
+        pack();
+        setLocation(100, 100);
     }
 
     public PainelCartas getPainelCartas() {

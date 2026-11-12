@@ -10,7 +10,7 @@ public class TratadorCliqueTabuleiro implements MouseListener {
     }
 
     public void mouseClicked(MouseEvent e) {
-        controlador.paradaClicada(e.getX(), e.getY());
+        controlador.tabuleiroClicado(e.getX(), e.getY(), e.getButton() == MouseEvent.BUTTON3);
     }
 
     public void mousePressed(MouseEvent e) { }

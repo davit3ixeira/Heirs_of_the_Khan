@@ -10,30 +10,22 @@ import model.Observado;
 import model.Observador;
 
 public class JanelaJogo extends JFrame implements Observador {
-    public final int LARG_DEFAULT = 1400;
-    public final int ALT_DEFAULT = 1000;
+    public static final int LARG_CONTEUDO = 1384;
+    public static final int ALT_CONTEUDO = 945;
     public static final int NUM_CARTELAS = 5;
 
     Image[] cartelas = new Image[NUM_CARTELAS];
     PainelTabuleiro pt;
     PainelJogador pj;
+    PainelAcoes pa = new PainelAcoes();
     JLabel lVez = new JLabel();
-    JLabel lMovimentos = new JLabel();
-    JLabel lColetas = new JLabel();
-    JLabel lTributos = new JLabel();
     JButton bEncerrar = new JButton("Encerrar Turno");
+    JButton bPilha = new JButton("Comprar da pilha");
     JButton bCartela = new JButton("Cartela");
     JButton bCartas = new JButton("Cartas");
 
     public JanelaJogo(String s) {
         super(s);
-        Toolkit tk = Toolkit.getDefaultToolkit();
-        Dimension screenSize = tk.getScreenSize();
-        int sl = screenSize.width;
-        int sa = screenSize.height;
-        int x = sl / 2 - LARG_DEFAULT / 2;
-        int y = sa / 2 - ALT_DEFAULT / 2;
-        setBounds(x, y, LARG_DEFAULT, ALT_DEFAULT);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setResizable(false);
 
@@ -44,24 +36,42 @@ public class JanelaJogo extends JFrame implements Observador {
 
         Container c = getContentPane();
         c.setLayout(null);
-        pt.setBounds(0, 0, PainelTabuleiro.LARGURA, PainelTabuleiro.ALTURA);
-        lVez.setBounds(950, 20, 420, 30);
-        pj.setBounds(950, 60, PainelJogador.LARGURA, PainelJogador.ALTURA);
-        lMovimentos.setBounds(950, 300, 420, 30);
-        lColetas.setBounds(950, 330, 420, 30);
-        lTributos.setBounds(950, 360, 420, 30);
-        bEncerrar.setBounds(950, 410, 160, 30);
-        bCartela.setBounds(950, 450, 160, 30);
-        bCartas.setBounds(950, 490, 160, 30);
+        c.setPreferredSize(new Dimension(Escala.px(LARG_CONTEUDO), Escala.px(ALT_CONTEUDO)));
+        definirLimites(pt, 0, 0, PainelTabuleiro.LARGURA, PainelTabuleiro.ALTURA);
+        definirLimites(lVez, 950, 5, 420, 26);
+        definirLimites(pj, 950, 34, PainelJogador.LARGURA, PainelJogador.ALTURA);
+        definirLimites(pa, 950, 268, PainelAcoes.LARGURA, PainelAcoes.ALTURA);
+        definirLimites(bEncerrar, 950, 800, 205, 30);
+        definirLimites(bPilha, 1165, 800, 205, 30);
+        definirLimites(bCartela, 950, 838, 205, 30);
+        definirLimites(bCartas, 1165, 838, 205, 30);
         c.add(pt);
         c.add(lVez);
         c.add(pj);
-        c.add(lMovimentos);
-        c.add(lColetas);
-        c.add(lTributos);
+        c.add(pa);
         c.add(bEncerrar);
+        c.add(bPilha);
         c.add(bCartela);
         c.add(bCartas);
+        pack();
+        centralizar();
+    }
+
+    /** Posiciona um componente usando as medidas do projeto, ajustadas pela escala. */
+    private void definirLimites(Component componente, int x, int y, int largura, int altura) {
+        componente.setBounds(Escala.px(x), Escala.px(y), Escala.px(largura), Escala.px(altura));
+    }
+
+    /** Centraliza a janela na área útil da tela, sem cobrir a barra de tarefas. */
+    private void centralizar() {
+        Rectangle area = Escala.areaUtil();
+        if (area == null) {
+            setLocationRelativeTo(null);
+            return;
+        }
+        int x = area.x + (area.width - getWidth()) / 2;
+        int y = area.y + (area.height - getHeight()) / 2;
+        setLocation(Math.max(area.x, x), Math.max(area.y, y));
     }
 
     static Image carregar(String arquivo) {
@@ -84,8 +94,16 @@ public class JanelaJogo extends JFrame implements Observador {
         return pj;
     }
 
+    public PainelAcoes getPainelAcoes() {
+        return pa;
+    }
+
     public JButton getBotaoEncerrar() {
         return bEncerrar;
+    }
+
+    public JButton getBotaoPilha() {
+        return bPilha;
     }
 
     public JButton getBotaoCartela() {
@@ -99,21 +117,13 @@ public class JanelaJogo extends JFrame implements Observador {
     public void notificar(Observado o) {
         String corDaVez = (String) o.get(Fachada.VEZ);
         boolean colunaAtivada = (Boolean) o.get(Fachada.COLUNA_ATIVADA);
-        int movimentos = (Integer) o.get(Fachada.MOVIMENTOS);
-        lVez.setText("Jogador da vez: " + corDaVez);
+        boolean khanPendente = (Boolean) o.get(Fachada.KHAN_PENDENTE);
+        boolean fim = (Boolean) o.get(Fachada.FIM);
+        boolean semEscolha = o.get(Fachada.ESCOLHA) == null;
+        lVez.setText(fim ? "Fim de jogo" : "Jogador da vez: " + corDaVez);
         lVez.setForeground(Cores.converter(corDaVez));
-        if (colunaAtivada)
-            lMovimentos.setText("Movimentos restantes: " + movimentos);
-        else
-            lMovimentos.setText("Escolha uma coluna do seu tabuleiro");
-        bEncerrar.setEnabled(colunaAtivada);
-        if (colunaAtivada)
-            lColetas.setText("Coletas de tributo restantes: " + o.get(Fachada.COLETAS));
-        else
-            lColetas.setText("");
-        int[] tributos = (int[]) o.get(Fachada.TRIBUTOS_JOGADOR);
-        lTributos.setText("Tributos - espadas: " + tributos[0] + "  yurts: " + tributos[1]
-                + "  moedas: " + tributos[2]);
+        bEncerrar.setEnabled(colunaAtivada && !khanPendente && semEscolha && !fim);
+        bPilha.setEnabled(colunaAtivada && !fim);
         pj.setVisible((Boolean) o.get(Fachada.CARTELA_VISIVEL));
     }
 }

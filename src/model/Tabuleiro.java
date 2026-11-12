@@ -2,11 +2,15 @@ package model;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 class Tabuleiro {
     static final String KARAKORUM = "KARAKORUM";
@@ -127,6 +131,87 @@ class Tabuleiro {
             return false;
         }
 
+        jogador.irPara(atual, percurso);
+        return true;
+    }
+
+    Collection<Parada> todasParadas() {
+        return Collections.unmodifiableCollection(paradas.values());
+    }
+
+    Collection<Provincia> todasProvincias() {
+        return Collections.unmodifiableCollection(provincias.values());
+    }
+
+    Set<Parada> alcanceDeUmMovimento(Parada origem, String cor) {
+        Set<Parada> alcancadas = new LinkedHashSet<>();
+        Set<Parada> expandidas = new LinkedHashSet<>();
+        Deque<Parada> fila = new ArrayDeque<>();
+        fila.add(origem);
+        expandidas.add(origem);
+        while (!fila.isEmpty()) {
+            Parada atual = fila.poll();
+            for (Parada vizinha : atual.getVizinhas()) {
+                if (vizinha == origem) {
+                    continue;
+                }
+                alcancadas.add(vizinha);
+                if (vizinha.temYurtDe(cor) && !expandidas.contains(vizinha)) {
+                    expandidas.add(vizinha);
+                    fila.add(vizinha);
+                }
+            }
+        }
+        return alcancadas;
+    }
+
+    List<String> menorPercursoComSaltos(String origemId, String destinoId, String cor) {
+        Parada origem = paradas.get(origemId);
+        Parada destino = paradas.get(destinoId);
+        if (origem == null || destino == null || origem == destino) {
+            return null;
+        }
+        Map<Parada, Parada> anterior = new HashMap<>();
+        Deque<Parada> fila = new ArrayDeque<>();
+        anterior.put(origem, origem);
+        fila.add(origem);
+        while (!fila.isEmpty() && !anterior.containsKey(destino)) {
+            Parada atual = fila.poll();
+            for (Parada proxima : alcanceDeUmMovimento(atual, cor)) {
+                if (!anterior.containsKey(proxima)) {
+                    anterior.put(proxima, atual);
+                    fila.add(proxima);
+                }
+            }
+        }
+        if (!anterior.containsKey(destino)) {
+            return null;
+        }
+        LinkedList<String> pousos = new LinkedList<>();
+        for (Parada p = destino; p != origem; p = anterior.get(p)) {
+            pousos.addFirst(p.getId());
+        }
+        return pousos;
+    }
+
+    boolean moverComSaltos(Jogador jogador, List<String> pousos, int limiteMovimentos) {
+        if (jogador == null || pousos == null || pousos.isEmpty() || limiteMovimentos < 1
+                || pousos.size() > limiteMovimentos) {
+            return false;
+        }
+        Parada atual = jogador.getParadaAtual();
+        List<Parada> percurso = new ArrayList<>();
+        for (String id : pousos) {
+            Parada proxima = paradas.get(id);
+            if (proxima == null || !alcanceDeUmMovimento(atual, jogador.getCor()).contains(proxima)) {
+                return false;
+            }
+            percurso.add(proxima);
+            atual = proxima;
+        }
+        if (!atual.temEspacoPara(jogador)) {
+            return false;
+        }
         jogador.irPara(atual, percurso);
         return true;
     }

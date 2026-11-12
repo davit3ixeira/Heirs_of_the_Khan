@@ -25,7 +25,9 @@ public class PainelCartas extends JPanel {
         repaint();
     }
 
-    public String cartaEm(int x, int y) {
+    public String cartaEm(int telaX, int telaY) {
+        int x = (int) Escala.doProjeto(telaX);
+        int y = (int) Escala.doProjeto(telaY);
         for (int i = 0; i < oferecidas.length; i++) {
             int x0 = 10 + i * 170;
             if (x >= x0 && x <= x0 + LARG_CARTA && y >= 30 && y <= 30 + ALT_CARTA)
@@ -43,6 +45,7 @@ public class PainelCartas extends JPanel {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
+        g2d.scale(Escala.FATOR, Escala.FATOR);
         if (oferecidas.length > 0) {
             g2d.drawString("Jogador " + escolhendo + ": clique na carta secreta que deseja manter", 10, 20);
             for (int i = 0; i < oferecidas.length; i++)

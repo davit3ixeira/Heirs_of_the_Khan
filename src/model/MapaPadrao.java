@@ -62,6 +62,22 @@ class MapaPadrao {
         {"PROV_12", "ESPADA", "CABUL_L", "CABUL_N", "CHINA_S", "PEQUIM_O"},
     };
 
+    static final String[] KHAN_LOCAIS = {"K1", "K2", "K3", "K4", "MELHORIAS"};
+
+    static final String[][] KHAN_PROVINCIAS = {
+        {"PROV_01", "PROV_02", "PROV_03"},
+        {"PROV_04", "PROV_06", "PROV_07"},
+        {"PROV_05", "PROV_08", "PROV_09"},
+        {"PROV_10", "PROV_11", "PROV_12"},
+    };
+
+    static final String[][] KHAN_PARADAS = {
+        {"KIEV_L", "KIEV_N", "MOSCOU_O", "PERSIA_N"},
+        {"SARAI_O", "SARAI_L", "RUSSIA_L", "PEQUIM_N"},
+        {"BAGDA_L", "SAMARCANDA_L", "SAMARCANDA_O", "CABUL_N", "PERSIA_S"},
+        {"PEQUIM_L", "CANTAO_N", "CANTAO_O", "CHINA_S"},
+    };
+
     private MapaPadrao() {
     }
 
@@ -74,7 +90,9 @@ class MapaPadrao {
         }
         for (String[] provincia : PROVINCIAS) {
             tabuleiro.adicionarProvincia(provincia[0]);
-            tabuleiro.getProvincia(provincia[0]).adicionarTributo(TipoTributo.interpretar(provincia[1]));
+            TipoTributo simbolo = TipoTributo.interpretar(provincia[1]);
+            tabuleiro.getProvincia(provincia[0]).setSimbolo(simbolo);
+            tabuleiro.getProvincia(provincia[0]).adicionarTributo(simbolo);
             for (int i = 2; i < provincia.length; i++) {
                 tabuleiro.associarProvincia(provincia[i], provincia[0]);
             }

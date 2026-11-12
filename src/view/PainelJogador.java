@@ -24,6 +24,7 @@ public class PainelJogador extends JPanel implements Observador {
     Image img;
     String cor = "";
     boolean[] ocupadas = new boolean[4];
+    String[][] melhorias = {{}, {}, {}, {}};
 
     public PainelJogador(Image[] cartelas) {
         this.cartelas = cartelas;
@@ -31,6 +32,7 @@ public class PainelJogador extends JPanel implements Observador {
 
     public void notificar(Observado o) {
         int numero = (Integer) o.get(Fachada.TABULEIRO);
+        melhorias = (String[][]) o.get(Fachada.MELHORIAS_JOGADOR);
         setJogador(cartelas[numero - 1], (String) o.get(Fachada.VEZ), (boolean[]) o.get(Fachada.OCUPADAS));
     }
 
@@ -42,8 +44,8 @@ public class PainelJogador extends JPanel implements Observador {
     }
 
     public int colunaEm(int x, int y) {
-        double rx = x * LARG_REF / LARGURA;
-        double ry = y * ALT_REF / ALTURA;
+        double rx = Escala.doProjeto(x) * LARG_REF / LARGURA;
+        double ry = Escala.doProjeto(y) * ALT_REF / ALTURA;
         if (ry < TOPO || ry > BASE)
             return -1;
         for (int i = 0; i < COL_INICIO.length; i++) {
@@ -58,7 +60,9 @@ public class PainelJogador extends JPanel implements Observador {
         Graphics2D g2d = (Graphics2D) g;
         if (img == null)
             return;
+        g2d.scale(Escala.FATOR, Escala.FATOR);
         g2d.drawImage(img, 0, 0, LARGURA, ALTURA, null);
+        desenharMelhorias(g2d);
 
         for (int i = 0; i < ocupadas.length; i++) {
             if (!ocupadas[i])
@@ -71,6 +75,20 @@ public class PainelJogador extends JPanel implements Observador {
             g2d.fill(circ);
             g2d.setPaint(Color.BLACK);
             g2d.draw(circ);
+        }
+    }
+
+    private void desenharMelhorias(Graphics2D g2d) {
+        double altLinha = (BASE - TOPO) / 5.0;
+        for (int c = 0; c < melhorias.length; c++) {
+            for (int r = 0; r < melhorias[c].length; r++) {
+                double topoRef = BASE - altLinha * (r + 2) + 8;
+                double x = (COL_INICIO[c] + 8) * LARGURA / LARG_REF;
+                double y = topoRef * ALTURA / ALT_REF;
+                double w = (COL_FIM[c] - COL_INICIO[c] - 16) * LARGURA / LARG_REF;
+                double h = (altLinha - 16) * ALTURA / ALT_REF;
+                g2d.drawImage(Imagens.melhoria(melhorias[c][r]), (int) x, (int) y, (int) w, (int) h, null);
+            }
         }
     }
 }
