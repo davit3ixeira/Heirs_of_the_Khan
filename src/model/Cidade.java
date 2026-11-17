@@ -1,9 +1,12 @@
 package model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-class Cidade {
+class Cidade implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     static final String[] IDS = {"KIEV", "MOSCOU", "SARAI", "SAMARCANDA", "BAGDA", "CABUL",
             "PEQUIM", "CANTAO", "KAESONG"};
 

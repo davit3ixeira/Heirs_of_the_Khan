@@ -9,7 +9,7 @@ import model.Observador;
 
 public class PainelAcoes extends JPanel implements Observador {
     public static final int LARGURA = 420;
-    public static final int ALTURA = 520;
+    public static final int ALTURA = 540;
 
     static final int TAM_ICONE = 40;
     static final int TAM_BONUS = 52;
@@ -17,6 +17,8 @@ public class PainelAcoes extends JPanel implements Observador {
     static final int Y_TESOUROS = 116;
     static final int Y_BONUS = 172;
     static final int Y_ESCOLHA = 250;
+    static final int LARG_MELHORIA = 95;
+    static final int ALT_MELHORIA = 50;
 
     String[] cores = new String[0];
     int[] recursos = new int[6];
@@ -26,6 +28,7 @@ public class PainelAcoes extends JPanel implements Observador {
     String[] bonus = new String[0];
     String escolha = null;
     String[] opcoesTesouro = new String[0];
+    String[] opcoesJochi = new String[0];
     int[] votos = new int[0];
     int[] conselho = new int[2];
     boolean fim = false;
@@ -44,6 +47,7 @@ public class PainelAcoes extends JPanel implements Observador {
         bonus = (String[]) o.get(Fachada.BONUS_JOGADOR);
         escolha = (String) o.get(Fachada.ESCOLHA);
         opcoesTesouro = (String[]) o.get(Fachada.OPCOES_TESOURO);
+        opcoesJochi = (String[]) o.get(Fachada.OPCOES_JOCHI);
         votos = (int[]) o.get(Fachada.VOTOS);
         conselho = (int[]) o.get(Fachada.CONSELHO);
         fim = (Boolean) o.get(Fachada.FIM);
@@ -82,6 +86,21 @@ public class PainelAcoes extends JPanel implements Observador {
         return -1;
     }
 
+    public int opcaoDeJochiEm(int telaX, int telaY) {
+        int x = (int) Escala.doProjeto(telaX);
+        int y = (int) Escala.doProjeto(telaY);
+        if (!Fachada.ESCOLHA_JOCHI_BRANCA.equals(escolha)) {
+            return -1;
+        }
+        for (int i = 0; i < opcoesJochi.length; i++) {
+            int bx = 10 + i * (LARG_MELHORIA + 12);
+            if (x >= bx && x <= bx + LARG_MELHORIA && y >= Y_ESCOLHA + 36 && y <= Y_ESCOLHA + 36 + ALT_MELHORIA) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
@@ -106,7 +125,7 @@ public class PainelAcoes extends JPanel implements Observador {
             g2d.setPaint(Color.RED);
             g2d.setFont(new Font("SansSerif", Font.BOLD, 12));
             g2d.drawString("Coloque o Khan num dos anéis vermelhos do tabuleiro.", 10, 54);
-        } else if (!colunaAtivada) {
+        } else if (!colunaAtivada && escolha == null) {
             g2d.setPaint(Color.BLUE);
             g2d.setFont(new Font("SansSerif", Font.BOLD, 13));
             g2d.drawString("Escolha uma coluna do seu tabuleiro.", 10, 54);
@@ -136,16 +155,17 @@ public class PainelAcoes extends JPanel implements Observador {
 
         g2d.setPaint(Color.DARK_GRAY);
         g2d.setFont(new Font("SansSerif", Font.ITALIC, 12));
-        g2d.drawString(mensagem, 10, ALTURA - 68);
+        g2d.drawString(mensagem, 10, ALTURA - 84);
         g2d.setFont(new Font("SansSerif", Font.PLAIN, 11));
         String[] ajuda = {
             "Parada: clique move; botão direito constrói yurt (parada visitada).",
             "Tributo da província: clique pega. Tesouro de cidade: clique ataca.",
             "Peça de bônus no tabuleiro: clique entrega tesouros ao conselheiro.",
-            "Melhoria da faixa: clique compra (2 moedas)."
+            "Melhoria da faixa: clique compra (2 moedas).",
+            "Poder do herdeiro: botão \"Poder\" (Ogedei: botão direito no tesouro)."
         };
         for (int i = 0; i < ajuda.length; i++) {
-            g2d.drawString(ajuda[i], 10, ALTURA - 56 + i * 15);
+            g2d.drawString(ajuda[i], 10, ALTURA - 66 + i * 15);
         }
     }
 
@@ -155,7 +175,19 @@ public class PainelAcoes extends JPanel implements Observador {
         }
         g2d.setPaint(Color.RED);
         g2d.setFont(new Font("SansSerif", Font.BOLD, 13));
-        if (Fachada.ESCOLHA_TESOURO_BONUS.equals(escolha)) {
+        if (Fachada.ESCOLHA_JOCHI_BRANCA.equals(escolha)) {
+            g2d.drawString("Poder de Jochi: qual melhoria vai para a coluna branca?", 10, Y_ESCOLHA + 14);
+            for (int i = 0; i < opcoesJochi.length; i++) {
+                g2d.drawImage(Imagens.melhoria(opcoesJochi[i]), 10 + i * (LARG_MELHORIA + 12), Y_ESCOLHA + 36,
+                        LARG_MELHORIA, ALT_MELHORIA, null);
+            }
+        } else if (Fachada.ESCOLHA_JOCHI_COLUNA.equals(escolha)) {
+            g2d.drawString("Poder de Jochi: clique numa coluna colorida da sua cartela", 10, Y_ESCOLHA + 14);
+            g2d.drawString("para colocar esta melhoria (qualquer cor).", 10, Y_ESCOLHA + 30);
+            if (opcoesJochi.length > 0) {
+                g2d.drawImage(Imagens.melhoria(opcoesJochi[0]), 10, Y_ESCOLHA + 36, LARG_MELHORIA, ALT_MELHORIA, null);
+            }
+        } else if (Fachada.ESCOLHA_TESOURO_BONUS.equals(escolha)) {
             g2d.drawString("Escolha 1 tesouro para manter:", 10, Y_ESCOLHA + 14);
             for (int i = 0; i < opcoesTesouro.length; i++) {
                 Desenho.imagemRedonda(g2d, Imagens.tesouro(opcoesTesouro[i]), 10 + i * (TAM_BONUS + 10),
@@ -168,7 +200,7 @@ public class PainelAcoes extends JPanel implements Observador {
     }
 
     private void desenharVotos(Graphics2D g2d) {
-        int y = 340;
+        int y = 356;
         g2d.setPaint(Color.BLACK);
         g2d.setFont(new Font("SansSerif", Font.BOLD, 13));
         g2d.drawString("Votos no Kurultai", 10, y);

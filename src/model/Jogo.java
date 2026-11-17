@@ -1,5 +1,6 @@
 package model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -10,7 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-class Jogo {
+class Jogo implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private static final int MAX_JOGADORES = 5;
     private static final int[] LIMITE_DE_VOTOS = {0, 0, 10, 14, 16, 17};
     private static final int[] VOTOS_MAIS_YURTS = {1, 1, 2, 2, 3};
@@ -34,6 +37,9 @@ class Jogo {
     private final Map<Tesouro, Integer> tesourosVirtuais = new EnumMap<>(Tesouro.class);
     private final Map<String, Integer> tesourosTiradosNaCidade = new HashMap<>();
     private boolean melhoriaGratisPendente = false;
+    private boolean poderUsadoNoTurno = false;
+    private boolean acaoRealizadaNoTurno = false;
+    private List<Melhoria> melhoriasDeJochi = new ArrayList<>();
     private List<Tesouro> opcoesTesouroBonus = new ArrayList<>();
 
     private final Map<TipoTributo, Integer> estoque = new EnumMap<>(TipoTributo.class);
@@ -204,6 +210,15 @@ class Jogo {
         for (int i = 0; i < TAMANHO_FAIXA; i++) {
             colocarNaFaixa(i, comprarDaPilha());
         }
+        colocarYurtsIniciaisDeTolui();
+    }
+
+    private void colocarYurtsIniciaisDeTolui() {
+        for (Jogador jogador : jogadores.values()) {
+            if (jogador.getHerdeiro() == Herdeiro.TOLUI && jogador.gastarYurtDaReserva()) {
+                tabuleiro.getParada(Tabuleiro.KARAKORUM).adicionarYurt(jogador.getCor());
+            }
+        }
     }
 
     private void colocarNaFaixa(int indice, Melhoria melhoria) {
@@ -367,11 +382,11 @@ class Jogo {
 
     private boolean bloqueado() {
         return fimDeJogo || melhoriaGratisPendente || !opcoesTesouroBonus.isEmpty()
-                || getJogadorEscolhendo() != null;
+                || !melhoriasDeJochi.isEmpty() || getJogadorEscolhendo() != null;
     }
 
     public boolean temEscolhaPendente() {
-        return melhoriaGratisPendente || !opcoesTesouroBonus.isEmpty();
+        return melhoriaGratisPendente || !opcoesTesouroBonus.isEmpty() || !melhoriasDeJochi.isEmpty();
     }
 
     public Map<String, Integer> totaisPorProvincia() {
@@ -544,6 +559,7 @@ class Jogo {
             return false;
         }
         movimentosRestantes -= pousos.size();
+        acaoRealizadaNoTurno = true;
         verificarCartasAbertas(cor);
         return true;
     }
@@ -558,6 +574,7 @@ class Jogo {
                 List.of(new EscolhaTributo(provinciaId, tributo.name())));
         if (coletou) {
             coletasRestantes--;
+            acaoRealizadaNoTurno = true;
             verificarCartasAbertas(cor);
         }
         return coletou;
@@ -591,6 +608,7 @@ class Jogo {
         if (cidade.getTesouros().isEmpty()) {
             conquistar(cidade, jogador);
         }
+        acaoRealizadaNoTurno = true;
         verificarCartasAbertas(cor);
         return true;
     }
@@ -638,8 +656,9 @@ class Jogo {
             return false;
         }
         Jogador jogador = jogadores.get(cor);
-        if (!jogador.visitouNoTurno(paradaId) || !parada.podeReceberYurt()
-                || jogador.getYurtsRestantes() <= 0) {
+        boolean alcance = jogador.visitouNoTurno(paradaId)
+                || (jogador.getHerdeiro() == Herdeiro.TOLUI && jogador.getParadaAtual().eVizinha(parada));
+        if (!alcance || !parada.podeReceberYurt() || jogador.getYurtsRestantes() <= 0) {
             return false;
         }
         if (yurtsVirtuais > 0) {
@@ -652,6 +671,7 @@ class Jogo {
         }
         jogador.gastarYurtDaReserva();
         parada.adicionarYurt(cor);
+        acaoRealizadaNoTurno = true;
         verificarCartasAbertas(cor);
         return true;
     }
@@ -805,6 +825,7 @@ class Jogo {
             }
         }
         registrar(cor + " entregou tesouros ao conselheiro.");
+        acaoRealizadaNoTurno = true;
         ganharVotos(jogador, conselheiro.getVotos());
         if (conselheiro.getBonus() != null) {
             Bonus bonus = conselheiro.getBonus();
@@ -940,6 +961,116 @@ class Jogo {
         return true;
     }
 
+    public int getQuantidadeMelhoriasDeJochi() {
+        return melhoriasDeJochi.size();
+    }
+
+    public List<String> getOpcoesDeJochi() {
+        List<String> ids = new ArrayList<>();
+        for (Melhoria m : melhoriasDeJochi) {
+            ids.add(m.getId());
+        }
+        return ids;
+    }
+
+    public boolean escolherMelhoriaDeJochi(int indice) {
+        Jogador jogador = jogadores.get(getJogadorDaVez());
+        if (jogador == null || fimDeJogo || getJogadorEscolhendo() != null || melhoriasDeJochi.size() != 2
+                || indice < 0 || indice >= 2 || jogador.colunaDeMelhoriasCheia(Herdeiro.COLUNA_BRANCA)) {
+            return false;
+        }
+        Melhoria escolhida = melhoriasDeJochi.remove(indice);
+        jogador.adicionarMelhoria(Herdeiro.COLUNA_BRANCA, escolhida);
+        registrar(jogador.getCor() + " colocou uma melhoria na coluna branca.");
+        return true;
+    }
+
+    public boolean colocarMelhoriaDeJochi(int coluna) {
+        Jogador jogador = jogadores.get(getJogadorDaVez());
+        if (jogador == null || fimDeJogo || getJogadorEscolhendo() != null || melhoriasDeJochi.size() != 1
+                || coluna < 0 || coluna >= Herdeiro.COLUNA_BRANCA || jogador.colunaDeMelhoriasCheia(coluna)) {
+            return false;
+        }
+        jogador.adicionarMelhoria(coluna, melhoriasDeJochi.remove(0));
+        registrar(jogador.getCor() + " colocou a outra melhoria numa coluna colorida.");
+        verificarCartasAbertas(jogador.getCor());
+        return true;
+    }
+
+    public String paradaReservaDe(String cor) {
+        Jogador jogador = jogadores.get(cor);
+        if (jogador == null || !jogador.temPeaoReserva()) {
+            return "";
+        }
+        return jogador.getParadaReserva().getId();
+    }
+
+    public boolean alternarPeao() {
+        Jogador jogador = jogadores.get(getJogadorDaVez());
+        if (jogador == null || bloqueado() || jogador.getHerdeiro() != Herdeiro.ALTANI || acaoRealizadaNoTurno
+                || !jogador.temPeaoReserva()) {
+            return false;
+        }
+        jogador.alternarPeao();
+        registrar(jogador.getCor() + " trocou o peão ativo.");
+        return true;
+    }
+
+    public boolean trocarCavaloPorEspada() {
+        Jogador jogador = jogadores.get(getJogadorDaVez());
+        if (jogador == null || bloqueado() || jogador.getHerdeiro() != Herdeiro.CHAGATAI || colunaAtivada < 0
+                || poderUsadoNoTurno || movimentosRestantes < 1 || !retirarDoEstoque(TipoTributo.ESPADA)) {
+            return false;
+        }
+        movimentosRestantes--;
+        jogador.adicionarTributo(TipoTributo.ESPADA);
+        poderUsadoNoTurno = true;
+        registrar(jogador.getCor() + " trocou um cavalo por uma espada.");
+        verificarCartasAbertas(jogador.getCor());
+        return true;
+    }
+
+    public boolean pegarTesouroPagandoMoeda(String cidadeId, int indice) {
+        Jogador jogador = jogadores.get(getJogadorDaVez());
+        Cidade cidade = cidade(cidadeId);
+        if (jogador == null || cidade == null || bloqueado() || jogador.getHerdeiro() != Herdeiro.OGEDEI
+                || colunaAtivada < 0 || poderUsadoNoTurno || !cidade.isRevelada() || cidade.isConquistada()
+                || cidade.getTesouros().size() < 2 || indice < 0 || indice >= cidade.getTesouros().size()
+                || moedasVirtuais + jogador.quantidadeTributo(TipoTributo.MOEDA) < 1) {
+            return false;
+        }
+        if (moedasVirtuais > 0) {
+            moedasVirtuais--;
+        } else {
+            jogador.gastarTributos(TipoTributo.MOEDA, 1);
+            devolverAoEstoque(TipoTributo.MOEDA, 1);
+        }
+        jogador.adicionarTesouro(cidade.getTesouros().remove(indice));
+        poderUsadoNoTurno = true;
+        registrar(jogador.getCor() + " pagou uma moeda por um tesouro de " + cidade.getId() + ".");
+        verificarCartasAbertas(jogador.getCor());
+        return true;
+    }
+
+    public boolean isPoderDisponivel() {
+        Jogador jogador = jogadores.get(getJogadorDaVez());
+        if (jogador == null || bloqueado()) {
+            return false;
+        }
+        switch (jogador.getHerdeiro()) {
+        case ALTANI:
+            return !acaoRealizadaNoTurno && jogador.temPeaoReserva();
+        case CHAGATAI:
+            return colunaAtivada >= 0 && !poderUsadoNoTurno && movimentosRestantes >= 1
+                    && estoque.get(TipoTributo.ESPADA) > 0;
+        case OGEDEI:
+            return colunaAtivada >= 0 && !poderUsadoNoTurno
+                    && moedasVirtuais + jogador.quantidadeTributo(TipoTributo.MOEDA) >= 1;
+        default:
+            return false;
+        }
+    }
+
     public boolean encerrarTurno() {
         Jogador jogador = jogadores.get(getJogadorDaVez());
         if (jogador == null || colunaAtivada < 0 || khanPendente || bloqueado()) {
@@ -956,6 +1087,8 @@ class Jogo {
         moedasVirtuais = 0;
         tesourosVirtuais.clear();
         tesourosTiradosNaCidade.clear();
+        poderUsadoNoTurno = false;
+        acaoRealizadaNoTurno = false;
         if (fimDisparado) {
             if (turnosRestantes <= 0) {
                 finalizarPartida();
@@ -1093,7 +1226,8 @@ class Jogo {
 
     private int totalDeYurts(String cor) {
         return yurtsNaRegiao(cor, Regiao.CHINA) + yurtsNaRegiao(cor, Regiao.RUSSIA)
-                + yurtsNaRegiao(cor, Regiao.PERSIA);
+                + yurtsNaRegiao(cor, Regiao.PERSIA)
+                + tabuleiro.getParada(Tabuleiro.KARAKORUM).yurtsDe(cor);
     }
 
     private void finalizarPartida() {
@@ -1142,7 +1276,15 @@ class Jogo {
     }
 
     private int distanciaAteKarakorum(String cor) {
-        Parada origem = jogadores.get(cor).getParadaAtual();
+        Jogador jogador = jogadores.get(cor);
+        int menor = distanciaAteKarakorum(jogador.getParadaAtual());
+        if (jogador.temPeaoReserva()) {
+            menor = Math.min(menor, distanciaAteKarakorum(jogador.getParadaReserva()));
+        }
+        return menor;
+    }
+
+    private int distanciaAteKarakorum(Parada origem) {
         Map<Parada, Integer> distancia = new HashMap<>();
         List<Parada> fila = new ArrayList<>();
         distancia.put(origem, 0);
@@ -1368,6 +1510,15 @@ class Jogo {
             return false;
         }
         jogador.iniciarTurno();
+        poderUsadoNoTurno = false;
+        acaoRealizadaNoTurno = false;
+        if (jogador.getHerdeiro() == Herdeiro.JOCHI && !jogador.isPoderInicialAplicado()
+                && pilhaDeMelhorias.size() >= 2) {
+            jogador.setPoderInicialAplicado(true);
+            melhoriasDeJochi = new ArrayList<>();
+            melhoriasDeJochi.add(comprarDaPilha());
+            melhoriasDeJochi.add(comprarDaPilha());
+        }
         return true;
     }
 

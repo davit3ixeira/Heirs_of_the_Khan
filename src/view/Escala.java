@@ -2,6 +2,7 @@ package view;
 
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
+import java.awt.Window;
 
 /**
  * Fator de escala da interface. As dimensões do projeto (janela de 1400 x 992 pixels) são
@@ -30,6 +31,11 @@ final class Escala {
     }
 
     private static double calcular() {
+        return fatorPara(LARGURA_PROJETO, ALTURA_PROJETO);
+    }
+
+    /** Fator que faz uma janela de projeto (largura x altura externas) caber na área útil da tela. */
+    static double fatorPara(int larguraProjeto, int alturaProjeto) {
         String forcado = System.getProperty("jogo.escala");
         if (forcado != null) {
             try {
@@ -45,8 +51,8 @@ final class Escala {
             return 1.0;
         }
         Rectangle area = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-        double porAltura = OCUPACAO_MAXIMA_ALTURA * area.height / ALTURA_PROJETO;
-        double porLargura = OCUPACAO_MAXIMA_LARGURA * area.width / LARGURA_PROJETO;
+        double porAltura = OCUPACAO_MAXIMA_ALTURA * area.height / alturaProjeto;
+        double porLargura = OCUPACAO_MAXIMA_LARGURA * area.width / larguraProjeto;
         return Math.max(FATOR_MINIMO, Math.min(1.0, Math.min(porAltura, porLargura)));
     }
 
@@ -56,5 +62,17 @@ final class Escala {
             return null;
         }
         return GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+    }
+
+    /** Centraliza uma janela na área útil da tela, sem cobrir a barra de tarefas. */
+    static void centralizar(Window janela) {
+        Rectangle area = areaUtil();
+        if (area == null) {
+            janela.setLocationRelativeTo(null);
+            return;
+        }
+        int x = area.x + (area.width - janela.getWidth()) / 2;
+        int y = area.y + (area.height - janela.getHeight()) / 2;
+        janela.setLocation(Math.max(area.x, x), Math.max(area.y, y));
     }
 }

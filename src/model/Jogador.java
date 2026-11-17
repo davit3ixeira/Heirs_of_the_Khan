@@ -1,5 +1,6 @@
 package model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -9,7 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-class Jogador {
+class Jogador implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     static final int TOTAL_YURTS = 12;
     static final int MAX_MELHORIAS_POR_COLUNA = 4;
 
@@ -17,6 +20,8 @@ class Jogador {
     private final Herdeiro herdeiro;
     private final Set<Integer> colunasOcupadas = new HashSet<>();
     private Parada paradaAtual;
+    private Parada paradaReserva;
+    private boolean poderInicialAplicado = false;
     private final Map<TipoTributo, Integer> tributos = new HashMap<>();
     private final Set<String> paradasVisitadasNoTurno = new LinkedHashSet<>();
 
@@ -33,6 +38,10 @@ class Jogador {
         this.herdeiro = herdeiro;
         this.paradaAtual = inicial;
         inicial.entrar(this);
+        if (herdeiro == Herdeiro.ALTANI) {
+            this.paradaReserva = inicial;
+            inicial.entrar(this);
+        }
         for (int i = 0; i < Herdeiro.NUM_COLUNAS; i++) {
             melhorias.add(new ArrayList<Melhoria>());
         }
@@ -63,6 +72,30 @@ class Jogador {
 
     Parada getParadaAtual() {
         return paradaAtual;
+    }
+
+    Parada getParadaReserva() {
+        return paradaReserva;
+    }
+
+    boolean temPeaoReserva() {
+        return paradaReserva != null;
+    }
+
+    void alternarPeao() {
+        Parada ativa = paradaAtual;
+        paradaAtual = paradaReserva;
+        paradaReserva = ativa;
+        paradasVisitadasNoTurno.clear();
+        paradasVisitadasNoTurno.add(paradaAtual.getId());
+    }
+
+    boolean isPoderInicialAplicado() {
+        return poderInicialAplicado;
+    }
+
+    void setPoderInicialAplicado(boolean aplicado) {
+        poderInicialAplicado = aplicado;
     }
 
     void iniciarTurno() {

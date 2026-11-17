@@ -1,5 +1,6 @@
 package model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -7,14 +8,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-class Parada {
+class Parada implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     static final int CAPACIDADE_ILIMITADA = Integer.MAX_VALUE;
 
     private final String id;
     private final int capacidade;
     private final Map<String, Parada> vizinhas = new HashMap<>();
     private final Map<String, Provincia> provinciasAdjacentes = new HashMap<>();
-    private final Map<String, Jogador> ocupantes = new HashMap<>();
+    private final Map<String, Integer> ocupantes = new HashMap<>();
     private final List<String> yurts = new ArrayList<>();
 
     Parada(String id, int capacidade) {
@@ -48,15 +51,24 @@ class Parada {
     }
 
     boolean temEspacoPara(Jogador jogador) {
-        return ocupantes.containsKey(jogador.getCor()) || ocupantes.size() < capacidade;
+        return getOcupantes() < capacidade;
     }
 
     void entrar(Jogador jogador) {
-        ocupantes.put(jogador.getCor(), jogador);
+        Integer atual = ocupantes.get(jogador.getCor());
+        ocupantes.put(jogador.getCor(), atual == null ? 1 : atual + 1);
     }
 
     void sair(Jogador jogador) {
-        ocupantes.remove(jogador.getCor());
+        Integer atual = ocupantes.get(jogador.getCor());
+        if (atual == null) {
+            return;
+        }
+        if (atual <= 1) {
+            ocupantes.remove(jogador.getCor());
+        } else {
+            ocupantes.put(jogador.getCor(), atual - 1);
+        }
     }
 
     int getCapacidade() {
@@ -94,6 +106,10 @@ class Parada {
     }
 
     int getOcupantes() {
-        return ocupantes.size();
+        int total = 0;
+        for (int quantidade : ocupantes.values()) {
+            total += quantidade;
+        }
+        return total;
     }
 }

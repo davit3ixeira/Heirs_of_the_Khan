@@ -1,5 +1,13 @@
 package model;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputFilter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,9 +48,16 @@ public class Fachada implements Observado {
     public static final int PLACAR = 33;
     public static final int MENSAGEM = 34;
     public static final int PILHA_MELHORIAS = 35;
+    public static final int PARADAS_RESERVA = 36;
+    public static final int PODER_DISPONIVEL = 37;
+    public static final int OPCOES_JOCHI = 38;
 
     public static final String ESCOLHA_TESOURO_BONUS = "TESOURO_BONUS";
     public static final String ESCOLHA_MELHORIA_GRATIS = "MELHORIA_GRATIS";
+    public static final String ESCOLHA_JOCHI_BRANCA = "JOCHI_BRANCA";
+    public static final String ESCOLHA_JOCHI_COLUNA = "JOCHI_COLUNA";
+
+    private static final String FILTRO_DE_CLASSES = "model.*;java.util.*;java.lang.*;!*";
 
     private static final String[] TIPOS = {"ESPADA", "YURT", "MOEDA"};
 
@@ -148,6 +163,12 @@ public class Fachada implements Observado {
             if (jogo.isMelhoriaGratisPendente()) {
                 return ESCOLHA_MELHORIA_GRATIS;
             }
+            if (jogo.getQuantidadeMelhoriasDeJochi() == 2) {
+                return ESCOLHA_JOCHI_BRANCA;
+            }
+            if (jogo.getQuantidadeMelhoriasDeJochi() == 1) {
+                return ESCOLHA_JOCHI_COLUNA;
+            }
             return jogo.getOpcoesTesouroBonus().isEmpty() ? null : ESCOLHA_TESOURO_BONUS;
         case OPCOES_TESOURO:
             return jogo.getOpcoesTesouroBonus().toArray(new String[0]);
@@ -163,6 +184,16 @@ public class Fachada implements Observado {
             return jogo.getUltimaMensagem();
         case PILHA_MELHORIAS:
             return jogo.getMelhoriasNaPilha();
+        case PARADAS_RESERVA:
+            String[] reservas = new String[jogo.getCores().size()];
+            for (int j = 0; j < reservas.length; j++) {
+                reservas[j] = jogo.paradaReservaDe(jogo.getCores().get(j));
+            }
+            return reservas;
+        case PODER_DISPONIVEL:
+            return jogo.isPoderDisponivel();
+        case OPCOES_JOCHI:
+            return jogo.getOpcoesDeJochi().toArray(new String[0]);
         default:
             return null;
         }
@@ -242,6 +273,64 @@ public class Fachada implements Observado {
 
     public boolean escolherTesouroBonus(int indice) {
         return notificarSe(!escolhendo() && jogo.escolherTesouroBonus(indice));
+    }
+
+    public boolean escolherMelhoriaDeJochi(int indice) {
+        return notificarSe(!escolhendo() && jogo.escolherMelhoriaDeJochi(indice));
+    }
+
+    public boolean colocarMelhoriaDeJochi(int coluna) {
+        return notificarSe(!escolhendo() && jogo.colocarMelhoriaDeJochi(coluna));
+    }
+
+    public boolean alternarPeao() {
+        return notificarSe(!escolhendo() && jogo.alternarPeao());
+    }
+
+    public boolean trocarCavaloPorEspada() {
+        return notificarSe(!escolhendo() && jogo.trocarCavaloPorEspada());
+    }
+
+    public boolean pegarTesouroPagandoMoeda(String cidadeId, int indiceDoTesouro) {
+        return notificarSe(!escolhendo() && jogo.pegarTesouroPagandoMoeda(cidadeId, indiceDoTesouro));
+    }
+
+    public boolean salvarPartida(String caminho) {
+        if (caminho == null || caminho.isBlank()) {
+            return false;
+        }
+        try (ObjectOutputStream saida = new ObjectOutputStream(
+                new BufferedOutputStream(new FileOutputStream(caminho)))) {
+            saida.writeObject(jogo);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    public boolean carregarPartida(String caminho) {
+        if (caminho == null || caminho.isBlank()) {
+            return false;
+        }
+        try (ObjectInputStream entrada = new ObjectInputStream(
+                new BufferedInputStream(new FileInputStream(caminho)))) {
+            entrada.setObjectInputFilter(ObjectInputFilter.Config.createFilter(FILTRO_DE_CLASSES));
+            Object lido = entrada.readObject();
+            if (!(lido instanceof Jogo)) {
+                return false;
+            }
+            jogo = (Jogo) lido;
+            cartelaVisivel = true;
+            cartasVisiveis = jogo.getJogadorEscolhendo() != null;
+            notificarObservadores();
+            return true;
+        } catch (IOException | ClassNotFoundException | ClassCastException e) {
+            return false;
+        }
+    }
+
+    public void atualizar() {
+        notificarObservadores();
     }
 
     public boolean encerrarTurno() {

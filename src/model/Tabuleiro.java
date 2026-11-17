@@ -1,5 +1,6 @@
 package model;
 
+import java.io.Serializable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,7 +13,9 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-class Tabuleiro {
+class Tabuleiro implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     static final String KARAKORUM = "KARAKORUM";
 
     private final Map<String, Parada> paradas = new HashMap<>();

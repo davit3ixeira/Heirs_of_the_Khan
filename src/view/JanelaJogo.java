@@ -23,6 +23,9 @@ public class JanelaJogo extends JFrame implements Observador {
     JButton bPilha = new JButton("Comprar da pilha");
     JButton bCartela = new JButton("Cartela");
     JButton bCartas = new JButton("Cartas");
+    JButton bPoder = new JButton("Poder");
+    JButton bSalvar = new JButton("Salvar jogo");
+    JLabel lAviso = new JLabel(" ");
 
     public JanelaJogo(String s) {
         super(s);
@@ -31,7 +34,7 @@ public class JanelaJogo extends JFrame implements Observador {
 
         pt = new PainelTabuleiro(carregar("assets/tabuleiro.jpg"));
         for (int i = 0; i < NUM_CARTELAS; i++)
-            cartelas[i] = carregar("assets/cartelas/cartela" + (i + 1) + ".jpg");
+            cartelas[i] = Imagens.cartela(i + 1);
         pj = new PainelJogador(cartelas);
 
         Container c = getContentPane();
@@ -41,10 +44,13 @@ public class JanelaJogo extends JFrame implements Observador {
         definirLimites(lVez, 950, 5, 420, 26);
         definirLimites(pj, 950, 34, PainelJogador.LARGURA, PainelJogador.ALTURA);
         definirLimites(pa, 950, 268, PainelAcoes.LARGURA, PainelAcoes.ALTURA);
-        definirLimites(bEncerrar, 950, 800, 205, 30);
-        definirLimites(bPilha, 1165, 800, 205, 30);
-        definirLimites(bCartela, 950, 838, 205, 30);
-        definirLimites(bCartas, 1165, 838, 205, 30);
+        definirLimites(bEncerrar, 950, 812, 205, 30);
+        definirLimites(bPilha, 1165, 812, 205, 30);
+        definirLimites(bCartela, 950, 848, 205, 30);
+        definirLimites(bCartas, 1165, 848, 205, 30);
+        definirLimites(bPoder, 950, 884, 205, 30);
+        definirLimites(bSalvar, 1165, 884, 205, 30);
+        definirLimites(lAviso, 950, 918, 420, 22);
         c.add(pt);
         c.add(lVez);
         c.add(pj);
@@ -53,6 +59,9 @@ public class JanelaJogo extends JFrame implements Observador {
         c.add(bPilha);
         c.add(bCartela);
         c.add(bCartas);
+        c.add(bPoder);
+        c.add(bSalvar);
+        c.add(lAviso);
         pack();
         centralizar();
     }
@@ -114,6 +123,19 @@ public class JanelaJogo extends JFrame implements Observador {
         return bCartas;
     }
 
+    public JButton getBotaoPoder() {
+        return bPoder;
+    }
+
+    public JButton getBotaoSalvar() {
+        return bSalvar;
+    }
+
+    public void mostrarAviso(String texto, boolean erro) {
+        lAviso.setForeground(erro ? Color.RED : new Color(0, 110, 0));
+        lAviso.setText(texto);
+    }
+
     public void notificar(Observado o) {
         String corDaVez = (String) o.get(Fachada.VEZ);
         boolean colunaAtivada = (Boolean) o.get(Fachada.COLUNA_ATIVADA);
@@ -125,5 +147,10 @@ public class JanelaJogo extends JFrame implements Observador {
         bEncerrar.setEnabled(colunaAtivada && !khanPendente && semEscolha && !fim);
         bPilha.setEnabled(colunaAtivada && !fim);
         pj.setVisible((Boolean) o.get(Fachada.CARTELA_VISIVEL));
+        int numero = (Integer) o.get(Fachada.TABULEIRO);
+        bPoder.setText(Poderes.ROTULOS[numero - 1]);
+        bPoder.setToolTipText(Poderes.dica(numero));
+        boolean poderPorBotao = numero == 1 || numero == 3;
+        bPoder.setEnabled(poderPorBotao && (Boolean) o.get(Fachada.PODER_DISPONIVEL));
     }
 }

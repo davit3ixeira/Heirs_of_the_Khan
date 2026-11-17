@@ -1,8 +1,15 @@
 package view;
 
 import java.awt.Image;
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 
 class Imagens {
     private static final Map<String, Image> CACHE = new HashMap<>();
@@ -54,5 +61,37 @@ class Imagens {
 
     static Image melhoria(String id) {
         return obter("assets/cartoes/" + id + ".jpg");
+    }
+
+    static Image cartela(int numero) {
+        String arquivo = "assets/cartelas/cartela" + numero + ".jpg";
+        Image imagem = CACHE.get(arquivo);
+        if (imagem == null) {
+            imagem = lerReduzida(arquivo, 3);
+            CACHE.put(arquivo, imagem);
+        }
+        return imagem;
+    }
+
+    private static Image lerReduzida(String arquivo, int passo) {
+        try (ImageInputStream entrada = ImageIO.createImageInputStream(new File(arquivo))) {
+            if (entrada != null) {
+                Iterator<ImageReader> leitores = ImageIO.getImageReaders(entrada);
+                if (leitores.hasNext()) {
+                    ImageReader leitor = leitores.next();
+                    try {
+                        leitor.setInput(entrada);
+                        ImageReadParam parametros = leitor.getDefaultReadParam();
+                        parametros.setSourceSubsampling(passo, passo, 0, 0);
+                        return leitor.read(0, parametros);
+                    } finally {
+                        leitor.dispose();
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+        return JanelaJogo.carregar(arquivo);
     }
 }

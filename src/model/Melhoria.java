@@ -1,6 +1,9 @@
 package model;
 
-final class Melhoria {
+import java.io.Serializable;
+final class Melhoria implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private static final String[] LETRA_COLUNA = {"R", "V", "A"};
 
     private final TipoMelhoria tipo;

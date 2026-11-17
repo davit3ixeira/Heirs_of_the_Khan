@@ -23,6 +23,7 @@ public class PainelTabuleiro extends JPanel implements Observador {
     MapaVisual mapa = new MapaVisual();
     String[] cores = new String[0];
     String[] paradas = new String[0];
+    String[] reservas = new String[0];
     Map<String, int[]> provincias = new HashMap<>();
     Map<String, String[]> yurts = new HashMap<>();
     String[][] cidades = new String[0][];
@@ -48,6 +49,7 @@ public class PainelTabuleiro extends JPanel implements Observador {
         khanPendente = (Boolean) o.get(Fachada.KHAN_PENDENTE);
         escolha = (String) o.get(Fachada.ESCOLHA);
         pilha = (Integer) o.get(Fachada.PILHA_MELHORIAS);
+        reservas = (String[]) o.get(Fachada.PARADAS_RESERVA);
         setPeoes((String[]) o.get(Fachada.CORES), (String[]) o.get(Fachada.PARADAS));
     }
 
@@ -266,22 +268,38 @@ public class PainelTabuleiro extends JPanel implements Observador {
     }
 
     private void desenharPeoes(Graphics2D g2d) {
+        java.util.List<String> cor = new java.util.ArrayList<>();
+        java.util.List<String> onde = new java.util.ArrayList<>();
+        java.util.List<Boolean> ativo = new java.util.ArrayList<>();
         for (int i = 0; i < cores.length; i++) {
+            cor.add(cores[i]);
+            onde.add(paradas[i]);
+            ativo.add(true);
+            if (i < reservas.length && !reservas[i].isEmpty()) {
+                cor.add(cores[i]);
+                onde.add(reservas[i]);
+                ativo.add(false);
+            }
+        }
+        for (int i = 0; i < cor.size(); i++) {
             int indice = 0;
             for (int j = 0; j < i; j++) {
-                if (paradas[j].equals(paradas[i])) {
+                if (onde.get(j).equals(onde.get(i))) {
                     indice++;
                 }
             }
-            Point p = mapa.posicaoDoPiao(paradas[i], indice);
+            Point p = mapa.posicaoDoPiao(onde.get(i), indice);
             double cX = telaX(p.x);
             double cY = telaY(p.y);
+            double raio = ativo.get(i) ? DIAM_PEAO / 2 : DIAM_PEAO / 2 - 3;
             Ellipse2D circ = new Ellipse2D.Double();
-            circ.setFrameFromCenter(cX, cY, cX + DIAM_PEAO / 2, cY + DIAM_PEAO / 2);
-            g2d.setPaint(Cores.converter(cores[i]));
+            circ.setFrameFromCenter(cX, cY, cX + raio, cY + raio);
+            g2d.setPaint(Cores.converter(cor.get(i)));
             g2d.fill(circ);
-            g2d.setPaint(Color.BLACK);
+            g2d.setPaint(ativo.get(i) ? Color.BLACK : Color.WHITE);
+            g2d.setStroke(new BasicStroke(ativo.get(i) ? 3 : 2));
             g2d.draw(circ);
+            g2d.setStroke(new BasicStroke(1));
         }
     }
 

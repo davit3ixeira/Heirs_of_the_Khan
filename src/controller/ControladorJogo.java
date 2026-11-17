@@ -1,6 +1,7 @@
 package controller;
 
 import model.Fachada;
+import view.Arquivos;
 import view.JanelaCartas;
 import view.JanelaEscolha;
 import view.JanelaInicial;
@@ -18,6 +19,7 @@ public class ControladorJogo {
     public ControladorJogo() {
         janelaInicial = new JanelaInicial();
         janelaInicial.getBotaoNova().addActionListener(new TratadorNovaPartida(this));
+        janelaInicial.getBotaoContinuar().addActionListener(new TratadorContinuarPartida(this));
     }
 
     public void iniciar() {
@@ -37,7 +39,48 @@ public class ControladorJogo {
             return;
         int[] tabuleiros = janelaEscolha.getTabuleirosEscolhidos();
         janelaEscolha.dispose();
+        abrirJanelasDoJogo();
+        fachada.iniciarPartida(cores, tabuleiros);
+    }
 
+    void continuarPartida() {
+        String caminho = Arquivos.escolherParaAbrir(janelaInicial);
+        if (caminho != null)
+            continuarPartida(caminho);
+    }
+
+    void continuarPartida(String caminho) {
+        if (!fachada.carregarPartida(caminho)) {
+            janelaInicial.mostrarMensagem("Não foi possível carregar a partida.");
+            return;
+        }
+        janelaInicial.dispose();
+        abrirJanelasDoJogo();
+        fachada.atualizar();
+    }
+
+    void salvarPartida() {
+        String caminho = Arquivos.escolherParaSalvar(janela);
+        if (caminho != null)
+            salvarPartida(caminho);
+    }
+
+    void salvarPartida(String caminho) {
+        if (fachada.salvarPartida(caminho))
+            janela.mostrarAviso("Partida salva.", false);
+        else
+            janela.mostrarAviso("Não foi possível salvar a partida.", true);
+    }
+
+    void usarPoder() {
+        int herdeiro = (Integer) fachada.get(Fachada.TABULEIRO);
+        if (herdeiro == 1)
+            fachada.alternarPeao();
+        else if (herdeiro == 3)
+            fachada.trocarCavaloPorEspada();
+    }
+
+    private void abrirJanelasDoJogo() {
         janela = new JanelaJogo("Herdeiros do Khan");
         janelaCartas = new JanelaCartas();
         janela.getPainelTabuleiro().addMouseListener(new TratadorCliqueTabuleiro(this));
@@ -47,6 +90,8 @@ public class ControladorJogo {
         janela.getBotaoPilha().addActionListener(new TratadorComprarPilha(this));
         janela.getBotaoCartela().addActionListener(new TratadorAlternarCartela(this));
         janela.getBotaoCartas().addActionListener(new TratadorAlternarCartas(this));
+        janela.getBotaoPoder().addActionListener(new TratadorPoder(this));
+        janela.getBotaoSalvar().addActionListener(new TratadorSalvarPartida(this));
         janelaCartas.addWindowListener(new TratadorFecharCartas(this));
         janelaCartas.getPainelCartas().addMouseListener(new TratadorCliqueCartas(this));
 
@@ -56,12 +101,16 @@ public class ControladorJogo {
         fachada.adicionarObservador(janela.getPainelAcoes());
         fachada.adicionarObservador(janelaCartas);
         janela.setVisible(true);
-        fachada.iniciarPartida(cores, tabuleiros);
     }
 
     void tabuleiroClicado(int x, int y, boolean botaoDireito) {
         PainelTabuleiro tabuleiro = janela.getPainelTabuleiro();
         if (botaoDireito) {
+            Object[] tesouro = tabuleiro.tesouroDeCidadeEm(x, y);
+            if (tesouro != null) {
+                fachada.pegarTesouroPagandoMoeda((String) tesouro[0], (Integer) tesouro[1]);
+                return;
+            }
             String parada = tabuleiro.paradaEm(x, y);
             if (parada != null)
                 fachada.construirYurt(parada);
@@ -109,6 +158,11 @@ public class ControladorJogo {
             fachada.escolherTesouroBonus(opcao);
             return;
         }
+        int melhoria = acoes.opcaoDeJochiEm(x, y);
+        if (melhoria >= 0) {
+            fachada.escolherMelhoriaDeJochi(melhoria);
+            return;
+        }
         int bonus = acoes.bonusEm(x, y);
         if (bonus >= 0)
             fachada.usarBonus(bonus);
@@ -123,7 +177,11 @@ public class ControladorJogo {
 
     void colunaClicada(int x, int y) {
         int coluna = janela.getPainelJogador().colunaEm(x, y);
-        if (coluna >= 0)
+        if (coluna < 0)
+            return;
+        if (Fachada.ESCOLHA_JOCHI_COLUNA.equals(fachada.get(Fachada.ESCOLHA)))
+            fachada.colocarMelhoriaDeJochi(coluna);
+        else
             fachada.ativarColuna(coluna);
     }
 
